@@ -1,0 +1,257 @@
+/* src/styles/Homepage.css */
+
+/* General Styles */
+body {
+    margin: 0;
+    font-family: 'Arial', sans-serif;
+    background-color: #f0f0f0;
+  } 
+  .tex {
+    color: black;
+  } 
+  /* Hero Section */
+  .hero-section { 
+    background: linear-gradient(to right, #2c29be, #c56172);
+    text-align: center;
+    padding: 300px 20px;
+    box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1)
+  }   
+  .hero-section h1 {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #ffffff;
+    margin-bottom: 20px;
+  }
+  .hero-title {
+    font-size: 3rem;
+    font-weight: bold;
+    color: #fffbfb;
+    margin-bottom: 20px;
+  }
+  .hero-description {
+    font-size: 1.2rem;
+    color: #ffffff;
+    margin-bottom: 40px;
+  }
+  
+  .hero-section p {
+    font-size: 1.2rem;
+    color: #ffffff;
+    margin-bottom: 30px;
+  }
+  
+  .hero-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+  }
+  
+  .get-started-btn, .learn-more-btn {
+    padding: 10px 20px;
+    border-radius: 5px;
+    font-size: 1rem;
+    cursor: pointer;
+    border: none;
+  }
+  
+  .get-started-btn {
+    background-color:#007bff;
+    color:#fff;
+  }
+  
+  .get-started-btn:hover {
+    background-color:#0056b3;
+  }
+  
+  .learn-more-btn {
+    background-color: transparent;
+    border: 1px solid#007bff;
+    color: #007bff;
+  }
+  
+  .learn-more-btn:hover {
+    background-color: #007bff;
+    color: #fff;
+  }
+  /* Features Section */
+  .features-section {
+    padding: 50px 20px;
+    background-color: #f7f7f7;
+    text-align: center;
+  }
+  
+  .features-section h2 {
+    font-size: 2rem;
+    margin-bottom: 30px;
+    color: #333;
+  }
+  
+  .feature-cards {
+    display: flex;
+    flex-direction: column; /* Stack cards vertically */
+    gap: 30px; /* Add spacing between cards */
+  }
+  
+  .feature-card {
+    display: flex;
+    flex-direction: row; /* Align image and text horizontally */
+    align-items: center;
+    gap: 20px;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
+    background-color: #fff;
+  }
+  
+  .feature-card:nth-child(2n) {
+    flex-direction: row-reverse; /* Reverse layout for even-numbered cards */
+  }
+  
+  .feature-image {
+    width: 150px;
+    height: auto;
+    border-radius: 5px;
+    object-fit: cover; /* Ensure proper image aspect ratio */
+  }
+  
+  .feature-content {
+    flex: 1;
+    text-align: left;
+  }
+  
+  .feature-content h3 {
+    font-size: 1.5rem;
+    margin-bottom: 10px;
+    color: #333;
+  }
+  
+  .feature-content p {
+    font-size: 1rem;
+    color: #666;
+  }
+  
+  
+  /* Testimonials Section */
+  .testimonials-section {
+    padding: 50px 20px;
+    background-color: #fff;
+  }
+  
+  .testimonial-card {
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  
+  .testimonial-card p {
+    font-size: 1.1rem;
+    color: #666;
+  }
+  
+  /* Call to Action Section */
+  .cta-section {
+    text-align: center;
+    padding: 50px 20px;
+    background-color: #f7f7f7;
+  }
+  
+  .cta-btn {
+    padding: 15px 30px;
+    border-radius: 5px;
+    font-size: 1.2rem;
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+  }
+  
+  .cta-btn:hover {
+    background-color: #0056b3;
+  }
+  
+  .pricing-section {
+    text-align: center;
+    padding: 50px 20px;
+    background-color: #f7f7f7;
+  }
+  
+  .pricing-plans {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 40px;
+  }
+  
+  .pricing-plan {
+    background-color: #fff;
+    border-radius: 10px;
+    padding: 30px;
+    box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
+    width: 300px; /* Adjust width as needed */
+  }
+  
+  .pricing-plan .price {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 10px;
+  }
+  
+  .pricing-plan ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .pricing-plan ul li {
+    margin-bottom: 10px;
+  }
+  
+  .get-started-btn2 {
+    display: block;
+    width: 100%;
+    padding: 15px;
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 20px;
+  }
+
+  .contact-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    background-color: #f0f0f0; /* Background color for the section */
+  }
+  
+  .contact-info, .sign-in {
+    font-size: 14px;
+    color: #666;
+  }
+  
+  .sign-in a {
+    color: #007bff;
+    text-decoration: none;
+  }
+
+  /*FAQ section*/
+  .faq-section {
+    margin-top: 40px;
+    padding: 20px;
+}
+
+.faq-section h2 {
+    font-size: 24px;
+    margin-bottom: 20px;
+}
+
+.faq-item {
+    margin-bottom: 20px;
+}
+
+.faq-item p:first-child {
+    font-weight: bold;
+}
