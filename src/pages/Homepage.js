@@ -2,8 +2,8 @@
 import React from 'react';
 import '../styles/Homepage.css';
 import contacticon from '../icons/contact.jpg';
-import collabImg from '../icons/collab.jpg'; 
-import Fileshareing from '../icons/filesharing.jpg'; 
+import collabImg from '../icons/collaboration.jpg'; 
+import Filesharing from '../icons/filesharing.jpg'; 
 import taskicon from '../icons/task.jpg'; 
 import projecticon from '../icons/projecticon.jpg'; 
 import chaticon from '../icons/chat.jpg'; 
@@ -28,47 +28,72 @@ function Homepage() {
           <button className="learn-more-btn">Learn More</button>
         </div>
       </div> 
-           {/* Features Section */} 
-           <div id="features" className="features-section">
+          
+     {/* Features Section */}
+     <div id="features" className="features-section">
   <h2>Key Features</h2>
-  <div className="feature-cards">
-  <div className="feature-card">
-      <img src= {collabImg} alt="Collaboration Icon" className="feature-image" />
+  <div className="feature-pair">
+    {/* Feature 1 */}
+    <div className="feature">
+      <div className="feature-image">
+        <img src={collabImg}alt="Collaboration and Communication" />
+      </div>
       <div className="feature-content">
         <h3>Collaboration and Communication</h3>
         <p>Seamlessly collaborate with your team in real-time. Share ideas, provide feedback, and make decisions faster with enhanced communication tools.</p>
       </div>
     </div>
-    <div className="feature-card">
-      <img src={Fileshareing} alt="File Sharing Icon" className="feature-image" />
+    {/* Feature 2 */}
+    <div className="feature">
+      <div className="feature-image">
+        <img src={Filesharing} alt="File Sharing" />
+      </div>
       <div className="feature-content">
         <h3>File Sharing</h3>
         <p>Share files securely with your team, ensuring everyone has access to the latest resources. With version control, managing project documents is easier than ever.</p>
       </div>
     </div>
-  <div className="feature-card">
-      <img src={chaticon} alt="Chat Icon" className="feature-image" />
+  </div>
+
+  <div className="feature-pair">
+    {/* Feature 3 */}
+    <div className="feature">
+      <div className="feature-image">
+        <img src={chaticon} alt="Chat" />
+      </div>
       <div className="feature-content">
         <h3>Chat</h3>
         <p>Stay connected with team members through integrated real-time chat features. Streamline communication and reduce delays with instant messaging.</p>
       </div>
     </div>
-    <div className="feature-card">
-      <img src={taskicon} alt="Task Management Icon" className="feature-image" />
+    {/* Feature 4 */}
+    <div className="feature">
+      <div className="feature-image">
+        <img src={taskicon} alt="Task Management" />
+      </div>
       <div className="feature-content">
         <h3>Task Management</h3>
         <p>Efficiently organize, assign, and track tasks with built-in task management tools. Keep your team aligned and ensure deadlines are met with ease.</p>
       </div>
     </div>
-  <div className="feature-card">
-      <img src={projecticon} alt="Project Management Icon" className="feature-image" />
+  </div>
+
+  <div className="feature-pair">
+    {/* Feature 5 */}
+    <div className="feature">
+      <div className="feature-image">
+        <img src={projecticon} alt="Project Management" />
+      </div>
       <div className="feature-content">
         <h3>Project Management</h3>
         <p>Oversee projects from start to finish with tools for planning, execution, and monitoring. Track progress, set milestones, and keep your projects on course.</p>
       </div>
     </div>
-    <div className="feature-card">
-      <img src={Jira} alt="JIRA Integration Icon" className="feature-image" />
+    {/* Feature 6 */}
+    <div className="feature">
+      <div className="feature-image">
+        <img src={Jira} alt="JIRA Integration" />
+      </div>
       <div className="feature-content">
         <h3>JIRA Integration</h3>
         <p>Integrate seamlessly with JIRA to manage issues, track bugs, and prioritize tasks. Leverage JIRA’s powerful capabilities directly within our platform.</p>
@@ -77,19 +102,18 @@ function Homepage() {
   </div>
 </div>
 
-
       {/* Testimonials Section */}
-      <div className="testimonials-section">
-        <h2>What Our Customers Say</h2>
-        <div className="testimonial-card">
-          <p>"[Testimonial 1]"</p>
-          <p>- [Customer Name], [Company Name]</p>
-        </div>
-        <div className="testimonial-card">
-          <p>"[Testimonial 2]"</p>
-          <p>- [Customer Name], [Company Name]</p>
-        </div>
-      </div>
+      <section class="testimonials">
+  <h2>What Our Customers Say</h2>
+  <div class="testimonial-card">
+    <p>"This product has revolutionized our workflow. It's easy to use and incredibly powerful."</p>
+    <p>- John Doe, Acme Corporation</p>
+  </div>
+  <div class="testimonial-card">
+    <p>"I'm amazed at how much time and effort this tool has saved us. Highly recommended!"</p>
+    <p>- Jane Smith, Tech Solutions</p>
+  </div>
+  </section>
       
         {/* Pricing Section */} 
       <div id="pricing" className="pricing-section">
@@ -132,6 +156,39 @@ function Homepage() {
     </div>
   </div>
 </div> 
+
+<div class="discover-section">
+  <div class="left-content">
+    <h2>Discover the Power of Our Products</h2>
+    <p>
+      Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse varius enim in eros elementum tristique. Duis cursus, mi quis viverra ornare.
+    </p>
+    <button class="main-action-btn">Sign Up</button>
+  </div>
+  <div class="right-content">
+    <div class="feature-box white-box">
+      <h3>01</h3>
+      <h4>Sign Up for an Account</h4>
+      <p>Create a new account on the platform by providing your email and setting up a password.</p>
+    </div>
+    <div class="feature-box peach-box">
+      <h3>02</h3>
+      <h4>Explore Dashboard</h4>
+      <p>Navigate through the user dashboard to access projects, chat modules, file sharing, and other features.</p>
+    </div>
+    <div class="feature-box white-box">
+      <h3>03</h3>
+      <h4>Start a New Project</h4>
+      <p>Initiate a new project by defining its scope, adding team members, and setting up milestones.</p>
+    </div>
+    <div class="feature-box peach-box">
+      <h3>04</h3>
+      <h4>JIRA Integration</h4>
+      <p>Integrate with JIRA to manage tasks, track bugs, and enhance team productivity seamlessly.</p>
+    </div>
+  </div>
+</div>
+
 
       {/* Contact us */}
       <div id="contact" className="cta-section">

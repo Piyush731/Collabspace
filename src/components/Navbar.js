@@ -1,6 +1,8 @@
 import React from "react";
 import { Link as ScrollLink } from "react-scroll"; // Import Scroll Link
 import "../styles/Navbar.css";
+import { Link } from 'react-router-dom';
+import login1 from "../pages/login.js"
 
 function Navbar() {
   return (
@@ -55,23 +57,14 @@ function Navbar() {
         </div>
       </div>
       <div className="navbar-right">
-        <ScrollLink
-          to="login"
-          smooth={true}
-          duration={500}
-          className="login-btn"
-        >
-          Log In
-        </ScrollLink>
-        <ScrollLink
-          to="signup"
-          smooth={true}
-          duration={500}
-          className="signup-btn"
-        >
-          Sign Up
-        </ScrollLink>
-      </div>
+      {/* Use React Router's Link component */}
+      <Link to= "/Login.js" className="login-btn">
+        Log In
+      </Link>
+      <Link to="../pages/signup.js" className="signup-btn">
+        Sign Up
+      </Link>
+    </div>
     </nav>
   );
 }

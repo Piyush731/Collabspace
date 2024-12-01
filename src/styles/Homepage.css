@@ -4,7 +4,8 @@
 body {
     margin: 0;
     font-family: 'Arial', sans-serif;
-    background-color: #f0f0f0;
+    background-color:#f9f9f9;
+    box-sizing: border-box;
   } 
   .tex {
     color: black;
@@ -75,79 +76,181 @@ body {
   }
   /* Features Section */
   .features-section {
-    padding: 50px 20px;
+    padding: 50px;
     background-color: #f7f7f7;
+  }
+  
+  h2 {
     text-align: center;
-  }
-  
-  .features-section h2 {
     font-size: 2rem;
-    margin-bottom: 30px;
-    color: #333;
+    margin-bottom: 40px;
   }
   
-  .feature-cards {
+  .feature-pair {
     display: flex;
-    flex-direction: column; /* Stack cards vertically */
-    gap: 30px; /* Add spacing between cards */
-  }
-  
-  .feature-card {
-    display: flex;
-    flex-direction: row; /* Align image and text horizontally */
-    align-items: center;
+    flex-direction: column;
     gap: 20px;
-    padding: 20px;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
-    background-color: #fff;
+    margin-bottom: 40px;
   }
   
-  .feature-card:nth-child(2n) {
-    flex-direction: row-reverse; /* Reverse layout for even-numbered cards */
+  .feature {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    height: 50vh; /* Takes half of the viewport */
+    margin-bottom: 20px;
+  }
+  
+  .feature:nth-child(even) {
+    flex-direction: row-reverse; /* Alternate image and text */
   }
   
   .feature-image {
-    width: 150px;
-    height: auto;
-    border-radius: 5px;
-    object-fit: cover; /* Ensure proper image aspect ratio */
+    flex: 1;
+    height: 100%;
+    overflow: hidden;
+  }
+  
+  .feature-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Maintain aspect ratio */
   }
   
   .feature-content {
     flex: 1;
-    text-align: left;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    background-color: white;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
   }
   
   .feature-content h3 {
-    font-size: 1.5rem;
+    font-size: 1.8rem;
     margin-bottom: 10px;
-    color: #333;
   }
   
   .feature-content p {
     font-size: 1rem;
-    color: #666;
+    color: #555;
+    line-height: 1.6;
   }
   
-  
-  /* Testimonials Section */
-  .testimonials-section {
-    padding: 50px 20px;
+  /*get set start box*/
+  .discover-section {
+    display: flex;
+    padding: 50px;
+    gap: 30px;
     background-color: #fff;
   }
   
-  .testimonial-card {
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    padding: 20px;
+  .left-content {
+    flex: 1;
+  }
+  
+  .left-content h2 {
+    font-size: 2rem;
     margin-bottom: 20px;
   }
   
-  .testimonial-card p {
-    font-size: 1.1rem;
+  .left-content p {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: #555;
+    margin-bottom: 20px;
+  }
+  
+  .main-action-btn {
+    background-color: #d16940;
+    color: #fff;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  
+  .main-action-btn:hover {
+    background-color: #b85333;
+  }
+  
+  .right-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  
+  .feature-box {
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    transition: transform 0.3s ease;
+  }
+  
+  .feature-box:hover {
+    transform: scale(1.02);
+  }
+  
+  .feature-box h3 {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #d16940;
+  }
+  
+  .feature-box h4 {
+    font-size: 1.5rem;
+    margin-bottom: 10px;
+  }
+  
+  .feature-box p {
+    font-size: 1rem;
     color: #666;
+  }
+  
+  .white-box {
+    background-color: #fff;
+  }
+  
+  .peach-box {
+    background-color: #f8e1d6;
+  }
+  
+  /* Testimonials Section */
+  .testimonials {
+    text-align: center;
+    padding: 50px 0;
+  }
+  
+  .testimonials h2 {
+    font-size: 24px;
+    margin-bottom: 30px;
+  }
+  
+  .testimonial-card {
+    background-color: #f0f0f0;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  }
+  
+  .testimonial-card p:first-child {
+    font-style: italic;
+    font-size: 18px;
+    margin-bottom: 10px;
+  }
+  
+  .testimonial-card p:last-child {
+    font-size: 14px;
+    color: #888;
   }
   
   /* Call to Action Section */
@@ -161,14 +264,14 @@ body {
     padding: 15px 30px;
     border-radius: 5px;
     font-size: 1.2rem;
-    background-color: #007bff;
+    background-color: #d16940;
     color: #fff;
     border: none;
     cursor: pointer;
   }
   
   .cta-btn:hover {
-    background-color: #0056b3;
+    background-color: #b85333;
   }
   
   .pricing-section {
@@ -211,7 +314,7 @@ body {
     display: block;
     width: 100%;
     padding: 15px;
-    background-color: #007bff;
+    background-color:  #d16940;
     color: #fff;
     border: none;
     border-radius: 5px;

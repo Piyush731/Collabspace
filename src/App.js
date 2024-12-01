@@ -1,5 +1,5 @@
 // src/App.js
-import React from 'react';
+import React,{ useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Homepage from './pages/Homepage';
 import Dashboard from './pages/Dashboard';
@@ -8,9 +8,14 @@ import JiraIntegration from './pages/JiraIntegration';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ContactUs from './pages/ContactUs';
+import Login from "./pages/login";
+import Signup from "./pages/signup";
 import './styles/App.css';
 
 function App() {
+  useEffect(() => {
+    document.title = 'CollabSpace';
+  }, []);
   return (
     <Router>
       <div className="app">
@@ -22,6 +27,8 @@ function App() {
             <Route path="/task-management" element={<TaskManagement />} />
             <Route path="/jira" element={<JiraIntegration />} />
             <Route path="/contact" element={<ContactUs />} /> 
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />  
           </Routes>
         </div>
         <Footer />
