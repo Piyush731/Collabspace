@@ -1,0 +1,1 @@
+axios react-router-dom react-scroll tailwindcss framer-motion express mongoose bcrypt jsonwebtoken dotenv body-parser cors
