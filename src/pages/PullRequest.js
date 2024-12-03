@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import '../styles/TaskManagement.css';
 
 function TaskManagement() {
-  const [tasks, setTasks] = useState({
+  const [tasks] = useState({
     todo: ['Task 1', 'Task 2'],
     inProgress: ['Task 3'],
     done: ['Task 4'],

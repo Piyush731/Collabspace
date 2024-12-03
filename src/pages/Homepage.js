@@ -1,5 +1,7 @@
 // src/pages/Homepage.js
 import React from 'react';
+import { Link } from 'react-router-dom';
+import { Link as ScrollLink } from "react-scroll";
 import '../styles/Homepage.css';
 import contacticon from '../icons/contact.jpg';
 import collabImg from '../icons/collaboration.jpg'; 
@@ -13,7 +15,7 @@ function Homepage() {
     
   return (
     <div className="homepage">
-      {/* Navbar */} 
+      {/* Navbar */}
 
       {/* Hero Section */} 
       <div id="Hero" className="hero-section">
@@ -24,8 +26,19 @@ function Homepage() {
           Streamline your project management, communication, and collaboration with our innovative platform. Empower your team to work smarter and achieve better results.
         </p>
         <div className="hero-buttons">
-          <button className="get-started-btn">Get Started</button>
-          <button className="learn-more-btn">Learn More</button>
+        <Link to= "/login" className="get-started-btn">
+      Get Started
+      </Link> 
+      <ScrollLink
+                to="features"
+                smooth={true}
+                duration={500}
+                spy={true}
+                activeClass="active"
+                className="learn-more-btn"
+              >
+                Learn More
+              </ScrollLink> 
         </div>
       </div> 
           
@@ -103,13 +116,13 @@ function Homepage() {
 </div>
 
       {/* Testimonials Section */}
-      <section class="testimonials">
+      <section className="testimonials">
   <h2>What Our Customers Say</h2>
-  <div class="testimonial-card">
+  <div className="testimonial-card">
     <p>"This product has revolutionized our workflow. It's easy to use and incredibly powerful."</p>
     <p>- John Doe, Acme Corporation</p>
   </div>
-  <div class="testimonial-card">
+  <div className="testimonial-card">
     <p>"I'm amazed at how much time and effort this tool has saved us. Highly recommended!"</p>
     <p>- Jane Smith, Tech Solutions</p>
   </div>
@@ -128,7 +141,9 @@ function Homepage() {
         <li>File Sharing</li>
         <li>Chat Module</li>
       </ul>
-      <button className="get-started-btn2">Get Started</button>
+      <Link to= "/login" className="get-started-btn2">
+      Get Started
+      </Link>
     </div>
     <div className="pricing-plan">
       <h3>Business Plan</h3>
@@ -139,7 +154,9 @@ function Homepage() {
         <li>Project Management</li>
         <li>Team Collaboration</li> 
       </ul>
-      <button className="get-started-btn2">Get Started</button>
+      <Link to= "/login" className="get-started-btn2">
+      Get Started
+      </Link>
     </div>
     <div className="pricing-plan">
       <h3>Enterprise Plan</h3>
@@ -152,36 +169,43 @@ function Homepage() {
         <li>Video Conferencing</li>
         <li>Priority support</li>
       </ul>
-      <button className="get-started-btn2">Get Started</button>
+      <Link to= "/login" className="get-started-btn2">
+      Get Started
+      </Link>
     </div>
   </div>
 </div> 
 
-<div class="discover-section">
-  <div class="left-content">
-    <h2>Discover the Power of Our Products</h2>
+<div className="discover-section">
+  <div className="left-content">
+    <h2>Empower Your Team, Elevate Your Work</h2>
     <p>
-      Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse varius enim in eros elementum tristique. Duis cursus, mi quis viverra ornare.
+    <strong>Seamless Collaboration:</strong> Connect with your team in real-time, share ideas, and collaborate on projects efficiently.<br></br>
+    <strong>Efficient Project Management:</strong> Plan, track, and manage your projects with ease. Set deadlines, assign tasks, and monitor progress.<br></br>
+    <strong>Secure File Sharing:</strong> Share files securely and collaborate on documents in real-time.<br></br> 
+    <strong> Seamless Jira Integration:</strong> Integrate with Jira to streamline your development workflow.<br></br>
     </p>
-    <button class="main-action-btn">Sign Up</button>
+    <Link to="/signup" className="main-action-btn">
+        Sign Up Now
+      </Link>
   </div>
-  <div class="right-content">
-    <div class="feature-box white-box">
+  <div className="right-content">
+    <div className="feature-box white-box">
       <h3>01</h3>
       <h4>Sign Up for an Account</h4>
       <p>Create a new account on the platform by providing your email and setting up a password.</p>
     </div>
-    <div class="feature-box peach-box">
+    <div className="feature-box peach-box">
       <h3>02</h3>
       <h4>Explore Dashboard</h4>
       <p>Navigate through the user dashboard to access projects, chat modules, file sharing, and other features.</p>
     </div>
-    <div class="feature-box white-box">
+    <div className="feature-box white-box">
       <h3>03</h3>
       <h4>Start a New Project</h4>
       <p>Initiate a new project by defining its scope, adding team members, and setting up milestones.</p>
     </div>
-    <div class="feature-box peach-box">
+    <div className="feature-box peach-box">
       <h3>04</h3>
       <h4>JIRA Integration</h4>
       <p>Integrate with JIRA to manage tasks, track bugs, and enhance team productivity seamlessly.</p>
@@ -192,21 +216,21 @@ function Homepage() {
 
       {/* Contact us */}
       <div id="contact" className="cta-section">
-        <h1>Contact Us</h1> 
+        <p>Contact Us</p> 
       </div>
       {/* Form Section */}
       <div className="form-section">
         <img src={contacticon} alt="Contact Us Hero" className="form-image" />
         <form className="contact-form">
-          <input type="text" placeholder="Name" className="input-field" />
-          <input type="email" placeholder="Email" className="input-field" />
-          <textarea placeholder="Message" className="textarea-field"></textarea>
+          <input type="text" placeholder="Name" id="text" className="input-field" />
+          <input type="email" placeholder="Email"id="email" className="input-field" />
+          <textarea placeholder="Message" id="message" className="textarea-field"></textarea>
           <button type="submit" className="submit-btn">Send</button>
         </form>
       </div>
 
-      <div class="contact-section">
-  <div class="contact-info">
+      <div className="contact-section">
+  <div className="contact-info">
     <p>Have any questions? <a href= "contact">Contact Us</a></p>
   </div> 
 </div>

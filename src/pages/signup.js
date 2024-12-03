@@ -1,11 +1,33 @@
-import React from "react";
+import React, { useState } from "react";
+import { useAuth } from "../context/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 const Signup = () => {
+  const { signup } = useAuth();
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      setError("");
+      await signup(username, email, password);
+      alert("Signup successful!, Redirecting");
+      navigate("/login");// Redirect to login or other actions after signup
+    } catch (errMessage) {
+      setError(errMessage);
+    }
+  };
+
   return (
     <div className="bg-gray-100 flex justify-center items-center h-screen">
       <div className="w-full max-w-md bg-white rounded-lg shadow-lg p-8">
         <h2 className="text-2xl font-bold mb-6 text-center">Create an Account</h2>
-        <form>
+        {error && <p className="text-red-500 text-center mb-4">{error}</p>}
+        <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <label htmlFor="name" className="block text-sm font-medium text-gray-700">
               Full Name
@@ -13,6 +35,8 @@ const Signup = () => {
             <input
               type="text"
               id="name"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               className="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
               placeholder="Enter your name"
               required
@@ -25,6 +49,8 @@ const Signup = () => {
             <input
               type="email"
               id="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               className="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
               placeholder="Enter your email"
               required
@@ -37,6 +63,8 @@ const Signup = () => {
             <input
               type="password"
               id="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               className="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
               placeholder="Create a password"
               required

@@ -97,8 +97,8 @@ body {
     display: flex;
     flex-direction: row;
     align-items: center;
-    height: 50vh; /* Takes half of the viewport */
-    margin-bottom: 20px;
+    height: 48vh; /* Takes half of the viewport */
+    margin-bottom: 30px;
   }
   
   .feature:nth-child(even) {
@@ -152,8 +152,9 @@ body {
   }
   
   .left-content h2 {
-    font-size: 2rem;
-    margin-bottom: 20px;
+    font-size: 2.5rem;
+    margin-bottom: 50px;
+    margin-top: 120px;
   }
   
   .left-content p {
@@ -255,23 +256,13 @@ body {
   
   /* Call to Action Section */
   .cta-section {
+    text-size-adjust: 1000px;
     text-align: center;
     padding: 50px 20px;
     background-color: #f7f7f7;
-  }
-  
-  .cta-btn {
-    padding: 15px 30px;
-    border-radius: 5px;
-    font-size: 1.2rem;
-    background-color: #d16940;
-    color: #fff;
-    border: none;
-    cursor: pointer;
-  }
-  
-  .cta-btn:hover {
-    background-color: #b85333;
+  } 
+  #contact{
+    font-size: 50px;
   }
   
   .pricing-section {
