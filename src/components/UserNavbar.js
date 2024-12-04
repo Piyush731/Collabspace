@@ -1,6 +1,6 @@
 // src/components/UserNavbar.js
 
-import React,{ useState } from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import "../styles/UserNavbar.css";
@@ -14,70 +14,76 @@ const UserNavbar = () => {
   };
 
   return (
-    <nav className="user-navbar">
-      {/* Logo Section */}
-      <div className="navbar-left">
-          <button className="menu-icon" onClick={toggleMenu}>
-            ☰
-          </button>
-          <div className="user-navbar-logo">
-        <Link to="/dashboard" className="logo-text">
-          Collaborative Workspace
+    <nav className="navbar navbar-dark bg-dark fixed-top">
+      <div className="container-fluid">
+        {/* Navbar Brand */}
+        <div className="auth-navbar-logo">
+        <Link to="/dashboard" className="text-white font-bold text-xl">
+          CollabSpace
         </Link>
       </div>
-       </div> 
 
-      {/* Main Navigation */}
-      <div className="user-navbar-links">
-        <ul className="main-nav">
-          <li>
-            <Link to="/dashboard">Home</Link>
-          </li>
-          <li>
-            <Link to="/repository">Projects</Link>
-          </li>
-          <li>
-            <Link to="/issues">Issues</Link>
-          </li>
-          <li>
-            <Link to="/pull-requests">Pull Requests</Link>
-          </li>
-          <li>
-            <Link to="/marketplace">Marketplace</Link>
-          </li>
-          <li>
-            <Link to="/settings">Settings</Link>
-          </li>
-        </ul>
-      </div>
+        {/* Right-side Icons */}
+        <div className="d-flex align-items-center ms-auto">
+          {/* Search Box */}
+          <form className="d-flex me-3" role="search">
+            <input
+              className="form-control me-2"
+              type="search"
+              placeholder="Search"
+              aria-label="Search"
+            />
+          </form>
 
-      {/* User Profile Menu */}
-      <div className="user-profile-menu">
-        <div className="profile-dropdown">
-          <button className="profile-btn">User Menu</button>
-          <div className="dropdown-menu">
-            <Link to="/profile">Profile</Link>
-            <Link to="/notifications">Notifications</Link>
-            <Link to="/help">Help and Support</Link>
-            <button onClick={logout} className="dropdown-logout">
-              Logout
+          {/* Pull Request Icon */}
+          <button className="btn btn-dark border-0 me-2">
+            <i className="bi bi-git-pull-request"></i> PullRequest
+          </button>
+
+          {/* Issues Icon */}
+          <button className="btn btn-dark border-0 me-2">
+            <i className="bi bi-exclamation-circle"></i>Issues
+          </button>
+
+          {/* Notifications Icon */}
+          <button className="btn btn-dark border-0 me-2"> Notification
+            <i className="bi bi-bell"></i>
+          </button>
+
+          {/* Profile Icon with Dropdown */}
+          <div className="dropdown">
+            <button
+              className="btn btn-dark border-0 dropdown-toggle"
+              type="button"
+              id="profileDropdown"
+              data-bs-toggle="dropdown"
+              aria-expanded="false"
+            >
+              <i className="bi bi-person-circle"></i> Profile
             </button>
+            <ul
+              className="dropdown-menu dropdown-menu-end dropdown-menu-dark"
+              aria-labelledby="profileDropdown"
+            >
+              <li>
+                <Link className="dropdown-item" to="/profile">
+                  Profile
+                </Link>
+              </li>
+              <li>
+                <Link className="dropdown-item" to="/settings">
+                  Settings
+                </Link>
+              </li>
+              <li>
+                <button className="dropdown-item" onClick={logout}>
+                  Logout
+                </button>
+              </li>
+            </ul>
           </div>
         </div>
       </div>
-
-            {/* Dropdown Menu */}
-            {menuOpen && (
-        <div className="dropdown-menu2">
-          <ul>
-            <li><Link to="/option1">Option 1</Link></li>
-            <li><Link to="/option2">Option 2</Link></li>
-            <li><Link to="/option3">Option 3</Link></li>
-          </ul>
-        </div>
-      )}
-
-
     </nav>
   );
 };

@@ -16,6 +16,7 @@ import Footer from './components/Footer';
 import ContactUs from './pages/ContactUs';
 import Login from "./pages/login";
 import Signup from "./pages/signup";
+import Sidebar  from './components/sidebar';
 import './styles/App.css';
 
 function App() {
@@ -48,6 +49,7 @@ function App() {
             <Route path="/contact" element={<ContactUs />} /> 
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />  
+            <Route path="/sidebar" element={<Sidebar />} />
             <Route path="*" element={<div>Page Not Found</div>} />
           </Routes>
         </div>

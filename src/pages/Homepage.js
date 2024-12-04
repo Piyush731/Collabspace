@@ -10,12 +10,14 @@ import taskicon from '../icons/task.jpg';
 import projecticon from '../icons/projecticon.jpg'; 
 import chaticon from '../icons/chat.jpg'; 
 import Jira from '../icons/jira.jpg';
+import Sidebar from '../components/sidebar';
 
 function Homepage() {
     
   return (
     <div className="homepage">
       {/* Navbar */}
+      
 
       {/* Hero Section */} 
       <div id="Hero" className="hero-section">
