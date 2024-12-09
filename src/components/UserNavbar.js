@@ -42,7 +42,10 @@ const UserNavbar = () => {
 
           {/* Issues Icon */}
           <button className="btn btn-dark border-0 me-2">
+          <Link to="/repositories">
             <i className="bi bi-exclamation-circle"></i>Issues
+            </Link>
+
           </button>
 
           {/* Notifications Icon */}
