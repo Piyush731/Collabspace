@@ -1,0 +1,61 @@
+/* Style for sidebar container */
+.sidebar-container {
+  position: fixed;
+  top: 0;
+  left: -320px;
+  height: 100%;
+  width: 320px;
+  background-color: #444;
+  color: #f0f0f0;
+  transition: left 0.3s ease;
+  padding: 1.5rem;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.3);
+  z-index: 100;
+  }
+  
+  /* Sidebar visible when the 'open' class is toggled */
+  .sidebar-container.active {
+    left: 0;
+  }
+  
+  /* Header at the top of the sidebar */
+  .sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; 
+  margin-bottom: 1.5rem;
+  }
+  
+  /* Style for the close button */
+  .sidebar-toggle-btn {
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    color: #f5f5f5;
+    font-size: 1.2rem;
+  }
+  
+  /* Style for individual menu options in the sidebar */
+  .settings-menu-item {
+    margin: 1.2rem 0;
+    cursor: pointer;
+    transition: color 0.3s ease;
+  }
+  
+  .settings-menu-item:hover {
+    color: #1e90ff; /* Highlight effect */
+  }
+  
+  /* Grouped options for better user experience */
+  .settings-menu-group label {
+    display: block;
+    margin: 0.6rem 0;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: color 0.2s ease;
+  }
+  
+  .settings-menu-group label:hover {
+    color: #00bcd4;
+  }
+  

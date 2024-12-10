@@ -4,11 +4,12 @@ import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-route
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import Homepage from './pages/Homepage';
 import Dashboard from './pages/Dashboard';
-import Repositories from './pages/Projects';
+import UserProfilePage from './pages/UserProfilePage';
+import RepositoryDetails from './pages/RepositoryDetails';
+import Repositories from './pages/Repositories';
 import Issues from './pages/Issues';
 import PullRequest from './pages/PullRequest';
 import Settings from './pages/Settings'
-import Marketplace from './pages/Marketplace';
 import Navbar from './components/Navbar';
 import AuthNavbar from "./components/AuthNavbar";
 import UserNavbar from "./components/UserNavbar";
@@ -17,6 +18,7 @@ import ContactUs from './pages/ContactUs';
 import Login from "./pages/login";
 import Signup from "./pages/signup";
 import Sidebar  from './components/sidebar';
+import 'bootstrap-icons/font/bootstrap-icons.css'; 
 import './styles/App.css';
 
 function App() {
@@ -41,11 +43,12 @@ function App() {
           <Routes>
             <Route path="/" element={<Homepage />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/profile" element={<UserProfilePage />} />
+            <Route path="/repository/:id" element={<RepositoryDetails />} />
             <Route path="/repositories" element={<Repositories />} />
             <Route path="/issues" element={<Issues />} />
             <Route path="/pull-requests" element={<PullRequest />} />
             <Route path="/settings" element={<Settings />} />
-            <Route path="/marketplace" element={<Marketplace />} />
             <Route path="/contact" element={<ContactUs />} /> 
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />  

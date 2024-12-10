@@ -1,44 +1,37 @@
 import React from "react";
+import { Link } from "react-router-dom";
+import "../styles/sidebar.css";
 
 const Sidebar = () => {
   return (
-    <aside className="w-64 bg-dark text-white min-h-screen p-6">
-      <div className="mt-5">
-        <ul className="space-y-4">
-          <li>
-          <button className="btn btn-dark border-0 me-2">
-            <i className="bi bi-git-pull-request"></i> Dashboard
-          </button>
-          </li>
-          <li>
-          <button className="btn btn-dark border-0 me-2">
-              Projects
-              </button>
-          </li>
-          <li>
-          <button className="btn btn-dark border-0 me-2">
-              Tasks
-              </button>
-          </li>
-          <li>
-          <button className="btn btn-dark border-0 me-2">
-              Reports
-              </button>
-          </li>
-          </ul> 
-          </div>
-          <div  className="mt-80">
-            <ul className="space-y-4">
-              <li>
-              <button className="btn btn-dark border-0 me-2">
-              Settings
-              </button>
-          </li>
-          <button className="btn btn-dark border-0 me-2">
-              Tasks
-              </button>
-        </ul>
-      </div>
+    <aside className="sidebar bg-dark">
+      <ul className="list-unstyled">
+        <li>
+          <Link to="/dashboard" className="text-white">
+            <i className="bi bi-speedometer2 me-2"></i> Dashboard
+          </Link>
+        </li>
+        <li>
+          <Link to="/repositories" className="text-white">
+            <i className="bi bi-folder me-2"></i> Repositories
+          </Link>
+        </li>
+        <li>
+          <Link to="/tasks" className="text-white">
+            <i className="bi bi-list-check me-2"></i> Tasks
+          </Link>
+        </li>
+        <li>
+          <Link to="/reports" className="text-white">
+            <i className="bi bi-bar-chart me-2"></i> Reports
+          </Link>
+        </li>
+        <li>
+          <Link to="/settings" className="text-white">
+            <i className="bi bi-gear me-2"></i> Settings
+          </Link>
+        </li>
+      </ul>
     </aside>
   );
 };

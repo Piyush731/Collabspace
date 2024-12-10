@@ -1,0 +1,43 @@
+.user-profile-container {
+    padding: 2rem;
+  }
+  
+  .profile-header {
+    text-align: center;
+    margin-bottom: 1.5rem;
+  }
+  
+  .profile-data {
+    display: flex;
+    justify-content: space-between;
+    gap: 2rem;
+  }
+  
+  .profile-info {
+    flex: 1;
+    padding: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+  }
+  
+  .repo-section {
+    flex: 2;
+    padding: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+  }
+  
+  .visibility-btn {
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    border: none;
+    background-color: #007bff;
+    color: white;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+  }
+  
+  .visibility-btn:hover {
+    background-color: #0056b3;
+  }
+  

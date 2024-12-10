@@ -1,0 +1,37 @@
+.sidebar {
+    position: fixed;
+    top: 3.4rem;
+    left: 0;
+    height: 99vh;
+    width: 16rem;
+    background-color: black;
+    color: white;
+    z-index: 1030;
+    padding-top: 4rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  
+  .sidebar ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .sidebar li {
+    margin-bottom: 0.4rem;
+  }
+  
+  .sidebar a {
+    display: block;
+    padding: 1rem;
+    text-decoration: none;
+    color: white;
+    border-radius: 5px;
+    transition: background-color 0.3s ease-in-out;
+  }
+  
+  .sidebar a:hover {
+    background-color: #333;
+  }

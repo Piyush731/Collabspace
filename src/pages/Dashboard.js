@@ -61,7 +61,7 @@ const Dashboard = () => {
     <Sidebar />
 
       {/* Main Content */}
-      <main className="flex-1 p-8">
+      <main className="flex-1 ml-64 p-8">
         {/* Profile Section */}
         <motion.div
           className="w-full max-w-4xl bg-white shadow-lg rounded-lg p-6 mb-8"
