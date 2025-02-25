@@ -2,7 +2,7 @@ const express = require("express");
 const Repository = require("../models/Repository");
 const simpleGit = require("simple-git");
 const router = express.Router();
-const authenticateUser = require("../middleware/authMiddleware");
+const authenticateUser = require("../middlewares/authMiddleware");
 
 router.use(authenticateUser);
 //create new repository
