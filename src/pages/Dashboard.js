@@ -3,11 +3,16 @@ import { useNavigate } from "react-router-dom"; // For navigation
 import { motion } from "framer-motion";
 import axios from "axios";
 import Sidebar from "../components/sidebar";
+import RepositoryCard from "../components/RepositoryCard"; 
+import { useAuth } from "../context/AuthContext"; 
+import api from "../utils/api";
 
 const Dashboard = () => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true); // Loading state
-  const navigate = useNavigate(); // Navigation hook
+  const [repos, setRepos] = useState([]); 
+  const [loading, setLoading] = useState(true); //User Loading state
+  const [repoLoading, setRepoLoading] = useState(true);
+  const navigate = useNavigate(); // Navigation hook 
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -31,6 +36,28 @@ const Dashboard = () => {
 
     fetchUserData();
   }, [navigate]);
+
+
+  useEffect(() => {
+    if (!user) return; // Wait until user data is loaded
+
+    const fetchRepos = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) throw new Error("No token found");
+
+        const reposRes = await api.get("http://localhost:5000/api/repos/my-repos", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setRepos(reposRes.data);
+      } catch (error) {
+        console.error("Failed to fetch repositories:", error.message);
+      } finally {
+        setRepoLoading(false);
+      }
+    };
+    if (user) fetchRepos(); // Fetch only if user exists
+  }, [user]); 
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -134,6 +161,37 @@ const Dashboard = () => {
             <p className="text-sm">View and manage your JIRA bug updates.</p>
           </motion.div>
         </motion.div>
+
+
+      {/* Repository Section (New Code) */}
+      <div className="mt-8">
+  <div className="flex justify-between items-center mb-4">
+    <h2 className="text-2xl font-bold">Your Repositories</h2>
+    <button
+      className="bg-blue-500 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-600"
+      onClick={() => navigate("/create-repo")}
+    >
+      Create Repository
+    </button>
+  </div>
+  {repoLoading ? (
+    <div className="text-gray-500 text-center py-8">Loading repositories...</div>
+  ) : repos.length === 0 ? (
+    <div className="text-gray-500 text-center py-8">
+      No repositories found. Create your first repository!
+    </div>
+  ) : (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {repos.map((repo) => (
+        <RepositoryCard
+          key={repo._id}
+          repo={repo}
+          onClick={() => navigate(`/repo/${repo._id}`)}
+        />
+      ))}
+    </div>
+  )}
+</div>
       </main>
     </div>
   );

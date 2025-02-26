@@ -5,8 +5,6 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import Homepage from './pages/Homepage';
 import Dashboard from './pages/Dashboard';
 import UserProfilePage from './pages/UserProfilePage';
-import RepositoryDetails from './pages/RepositoryDetails';
-import Repositories from './pages/Repositories';
 import Issues from './pages/Issues';
 import PullRequest from './pages/PullRequest';
 import Settings from './pages/Settings'
@@ -20,6 +18,7 @@ import Signup from "./pages/signup";
 import Sidebar  from './components/sidebar';
 import 'bootstrap-icons/font/bootstrap-icons.css'; 
 import './styles/App.css';
+import CreateRepo from "./pages/CreateRepo";
 
 function App() {
   const location = useLocation(); // Safe to use here as it's inside Router
@@ -44,15 +43,14 @@ function App() {
             <Route path="/" element={<Homepage />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/profile" element={<UserProfilePage />} />
-            <Route path="/repository/:id" element={<RepositoryDetails />} />
-            <Route path="/repositories" element={<Repositories />} />
             <Route path="/issues" element={<Issues />} />
             <Route path="/pull-requests" element={<PullRequest />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/contact" element={<ContactUs />} /> 
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />  
-            <Route path="/sidebar" element={<Sidebar />} />
+            <Route path="/sidebar" element={<Sidebar />} /> 
+            <Route path="/create-repo" element={<CreateRepo />} />
             <Route path="*" element={<div>Page Not Found</div>} />
           </Routes>
         </div>

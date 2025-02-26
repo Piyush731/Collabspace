@@ -38,7 +38,7 @@ const RepositoryView = () => {
       </div>
       
       <div className="w-1/4 bg-white p-4 border-l">
-        {/* Chat component here */}nnn
+        {/* Chat component here */}
       </div>
     </div>
   );
