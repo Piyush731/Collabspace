@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const express = require("express");
 const router = express.Router();
-const verifyToken = require("../middlewares/authMiddleware"); // Import middleware
+const verifyToken = require("../middleware/auth"); // Import middleware
 const User = require("../models/User");
 //user dashboard route
 router.get("/user", verifyToken, async (req, res) => {

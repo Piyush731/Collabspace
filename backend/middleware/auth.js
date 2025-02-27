@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const User = require('../models/User'); 
 
 const verifyToken = async (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
@@ -9,9 +10,9 @@ const verifyToken = async (req, res, next) => {
   console.log("Received token middleware:", token);
   try {
     const verified = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id);
+    const user = await User.findById(verified.id);
     if (!user) throw new Error('User not found');
-    req.user = verified; // Attach the decoded token payload
+    req.user = user; // Attach the decoded token payload
     next();
   } catch (error) {
     res.status(401).json({ message: 'Invalid Token' });
