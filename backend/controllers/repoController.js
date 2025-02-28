@@ -97,8 +97,8 @@ exports.getUserRepositories = async (req, res) => {
     try {
       const repositories = await Repository.find({
         $or: [
-          { owner: req.user.id },
-          { 'collaborators.user': req.user.id }
+          { owner: req.user._id },
+          { 'collaborators.user': req.user._id }
         ]
       })
       .populate('owner', 'username email')

@@ -4,8 +4,8 @@ const {createRepository, getRepository, getUserRepositories } = require('../cont
 const verifyToken = require('../middleware/auth'); 
 
 router.post('/', verifyToken, createRepository); //create 
-router.get('/:id', verifyToken, getRepository); //get 
 router.get('/my-repos', verifyToken, getUserRepositories); //get user repo
+router.get('/:id', verifyToken, getRepository); //get 
 
 /*
 const mongoose = require('mongoose');
