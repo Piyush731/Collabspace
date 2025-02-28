@@ -1,16 +1,21 @@
 import React from "react";
-import { motion } from "framer-motion";
+import { motion } from "framer-motion"; 
+import { useNavigate } from "react-router-dom";
 
-const RepositoryCard = ({ repo, onClick }) => {
+const RepositoryCard = ({ repo }) => { 
+  const navigate = useNavigate(); 
+  const handleNavigate = () => {
+    navigate(`/repositories/${repo._id}`); // Navigate to repository view page
+  };
   return (
     <motion.div
       whileHover={{ scale: 1.03 }}
       className="bg-white rounded-lg shadow-md p-6 cursor-pointer"
-      onClick={onClick}
+      onClick={handleNavigate}
     >
       <div className="flex items-center mb-4">
         <div className={`h-3 w-3 rounded-full mr-2 
-          ${repo.visiblity === 'private' ? 'bg-red-500' : 'bg-green-500'}`}
+          ${repo.visibility === 'private' ? 'bg-red-500' : 'bg-green-500'}`}
         />
         <h3 className="text-xl font-semibold">{repo.name}</h3>
       </div>
