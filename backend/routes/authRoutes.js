@@ -1,9 +1,16 @@
+const axios = require('axios');
 const jwt = require('jsonwebtoken');
 const express = require("express");
 const router = express.Router();
 const verifyToken = require("../middleware/auth"); // Import middleware
-const User = require("../models/User");
-//user dashboard route
+const User = require("../models/User"); 
+require('dotenv').config(); 
+const GITEA_URL = process.env.GITEA_URL;
+const GITEA_ADMIN_TOKEN = process.env.GITEA_ADMIN_TOKEN; 
+console.log("GITEA_URL:", GITEA_URL);
+console.log("GITEA_ADMIN_TOKEN:", GITEA_ADMIN_TOKEN ? "Token Present" : "Token Missing");
+
+//User Dashboard Route
 router.get("/user", verifyToken, async (req, res) => {
   console.log("Decoded user from token:", req.user); // Log in middleware
   try {
@@ -19,21 +26,83 @@ router.get("/user", verifyToken, async (req, res) => {
 // Signup Route
 router.post("/signup", async (req, res) => {
     const { username, email, password } = req.body;
+    let giteaUser; // Declare outside try block
+
     try {
-      // Check if the user already exists
-      const existingUser = await User.findOne({ email });
-      if (existingUser) {
-        return res.status(400).json({ message: "Email is already in use" });
+      if (!GITEA_URL || !GITEA_ADMIN_TOKEN) {
+        return res.status(500).json({ error: "Gitea URL or token missing" });
       }
-  
-      // Create a new user
-      const user = new User({ username, email, password });
-      await user.save();
-  
-      res.status(201).json({ message: "User registered successfully" });
-    } catch (error) {
-      res.status(500).json({ message: "Something went wrong", error: error.message });
+      // Check MongoDB first
+      const sanitizedUsername = username.toLowerCase().replace(/[^a-z0-9-_]/g, '');
+      if (await User.findOne({ $or: [{ email }, { username }] })) {
+        return res.status(400).json({ 
+          message: "Email or username already exists" 
+        });
+      }
+      if (!sanitizedUsername || sanitizedUsername.length < 3) {
+        return res.status(400).json({ error: 'Invalid username format' });
+      }
+      
+      if (!/^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/.test(email)) {
+        return res.status(400).json({ error: 'Invalid email format' });
+      }
+           //delete if exist gitea user
+           try {
+      await axios.delete(
+        `${GITEA_URL}/api/v1/admin/users/${username}`,
+        { headers: { Authorization: `token ${GITEA_ADMIN_TOKEN}` } }
+      );
+    } catch (giteaError) {
+      if (!giteaError.response || giteaError.response.status !== 404) {
+        console.error('Gitea cleanup error:', giteaError.response?.data);
+      }
     }
+    console.log("Creating Gitea user...");
+       // 1. First create Gitea user
+      giteaUser = await axios.post(`${GITEA_URL}/api/v1/admin/users`,
+         { username : sanitizedUsername, email, password: password, login_name: sanitizedUsername,  send_notify: false  }, 
+         { headers: { Authorization: `token ${GITEA_ADMIN_TOKEN}`}}
+     );
+     console.log("Gitea user created successfully:", giteaUser.data);
+
+    // 2. Create local user with Gitea ID
+    const user = new User({  username: sanitizedUsername, email, password, giteaUserId: giteaUser.data.id });
+    console.log("Attempting to save user:", user);
+    await user.save();
+    console.log("User saved successfully:", user);
+    
+    // 3. Generate JWT token
+     const token = jwt.sign(
+      { id: user._id  },
+      process.env.JWT_SECRET,
+      { expiresIn: '1d' }
+    );
+
+    res.status(201).json({
+      user: user.toObject(),
+      token
+    });
+
+  } catch (error) {
+    console.error('Signup error:', error.response?.data || error.message);
+   // Cleanup Gitea user if MongoDB save failed
+   if (giteaUser?.data?.id) {
+    await axios.delete(`${GITEA_URL}/api/v1/admin/users/${sanitizedUsername}`, {
+      headers: { Authorization: `token ${GITEA_ADMIN_TOKEN}` },
+    });
+  }
+
+  const errorMessage = error.response?.data?.message || 
+  error.message || 
+  'Signup failed';
+
+  res.status(500).json({
+    error: error.response?.data?.message || 
+           error.response?.data?.errors?.map(e => e.message).join(', ') || 
+           'Signup failed'
+  });
+ }
+
   });
 // Login Route
 router.post("/login", async (req, res) => {
@@ -56,6 +125,24 @@ router.post("/login", async (req, res) => {
       res.status(200).json({ token, user: { username: user.username, email: user.email, userType: user.userType } });
     } catch (error) {
       res.status(500).json({ message: "Something went wrong", error: error.message });
-    }
+    } 
+
+    router.delete('/user', verifyToken, async (req, res) => {
+      try {
+        // Delete from MongoDB
+        await User.findByIdAndDelete(req.user._id);
+    
+        // Delete from Gitea
+        await axios.delete(
+          `${GITEA_URL}/api/v1/admin/users/${req.user.username}`,
+          { headers: { Authorization: `token ${GITEA_ADMIN_TOKEN}` } }
+        );
+    
+        res.status(200).json({ message: 'Account deleted' });
+      } catch (error) {
+        res.status(500).json({ error: 'Deletion failed' });
+      }
+    });
   }); 
+
 module.exports = router;

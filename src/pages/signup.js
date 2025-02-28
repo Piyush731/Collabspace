@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
 const Signup = () => {
   const { signup } = useAuth();
@@ -14,9 +15,13 @@ const Signup = () => {
     e.preventDefault();
     try {
       setError("");
+      if (!/^[a-zA-Z0-9-_]{3,20}$/.test(username)) {
+        throw 'Username must be 3-20 characters (letters, numbers, -_)';
+      }
+
       await signup(username, email, password);
       alert("Signup successful!, Redirecting");
-      navigate("/login");// Redirect to login or other actions after signup
+      navigate("/dashboard");// Redirect to login or other actions after signup
     } catch (errMessage) {
       setError(errMessage);
     }

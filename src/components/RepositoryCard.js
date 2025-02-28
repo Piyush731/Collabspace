@@ -10,15 +10,16 @@ const RepositoryCard = ({ repo, onClick }) => {
     >
       <div className="flex items-center mb-4">
         <div className={`h-3 w-3 rounded-full mr-2 
-          ${repo.type === 'private' ? 'bg-red-500' : 'bg-green-500'}`}
+          ${repo.visiblity === 'private' ? 'bg-red-500' : 'bg-green-500'}`}
         />
         <h3 className="text-xl font-semibold">{repo.name}</h3>
       </div>
       
       <div className="text-sm text-gray-600">
         <p>Owner: {repo.owner.username}</p>
-        <p>Type: {repo.type}</p>
-        <p>Members: {repo.members.length + 1}</p>
+        <p>Visibility: {repo.visibility}</p>
+        <p>Collaborators: {repo.collaborators.length}</p>
+        <p>Default Branch: {repo.defaultBranch}</p>
       </div>
     </motion.div>
   );

@@ -4,7 +4,8 @@ import axios from "axios";
 
 const CreateRepo = () => {
   const [name, setName] = useState("");
-  const [type, setType] = useState("private");
+  const [description, setDescription] = useState("");
+  const [visibility, setVisibility] = useState("private");
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
@@ -12,14 +13,13 @@ const CreateRepo = () => {
     e.preventDefault();
     try {
       const token = localStorage.getItem("token");
-      if (!token) throw new Error("No token found");
-
+      if (!token) throw new Error("No token found"); 
       const response = await axios.post(
         "http://localhost:5000/api/repos",
-        { name, type },
+        { name, description, visibility },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-
+      console.log('Repository created:', response.data);
       navigate("/dashboard"); // Redirect to dashboard after creation
     } catch (error) {
       setError(error.response?.data?.message || "Failed to create repository");
@@ -52,14 +52,27 @@ const CreateRepo = () => {
             </label>
             <select
               id="type"
-              value={type}
-              onChange={(e) => setType(e.target.value)}
+              value={visibility}
+              onChange={(e) => setVisibility(e.target.value)}
               className="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="private">Private</option>
-              <option value="shared">Shared</option>
+              <option value="public">Public</option>
             </select>
-          </div>
+          </div> 
+          
+          <div className="mb-4">
+              <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+             Description </label>
+             <textarea
+              id="description"
+              value={description}
+                 onChange={(e) => setDescription(e.target.value)}
+                 className="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Enter repository description"
+              rows="3"  />
+           </div>
+
           <button
             type="submit"
             className="w-full bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"

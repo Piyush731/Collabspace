@@ -1,9 +1,18 @@
-const express = require('express'); 
+const express = require('express');
+const router = express.Router(); 
+const {createRepository, getRepository, getUserRepositories } = require('../controllers/repoController');
+const verifyToken = require('../middleware/auth'); 
+
+router.post('/', verifyToken, createRepository); //create 
+router.get('/:id', verifyToken, getRepository); //get 
+router.get('/my-repos', verifyToken, getUserRepositories); //get user repo
+
+/*
 const mongoose = require('mongoose');
 const auth = require('../middleware/auth');
-const Repository = require('../models/Repository');
-const router = new express.Router();
-
+const Repository = require('../models/Repository'); 
+const User = require('../models/User');
+const axios = require('axios');
 // Create repository
 router.post('/repos', auth, async (req, res) => {
   const { name, type } = req.body;
@@ -124,5 +133,5 @@ router.delete('/repos/:id', auth, async (req, res) => {
     res.status(500).send({ error: 'Failed to delete repository', details: e.message });
   }
 });
-
+*/
 module.exports = router;

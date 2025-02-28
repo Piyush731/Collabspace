@@ -11,6 +11,7 @@ export const AuthProvider = ({ children }) => {
  useEffect(() => {
   const checkAuth = async () => {
     const token = localStorage.getItem("token");
+    if (!token) return setLoading(false);
     if (token) { 
       try {
         const response = await axios.get("http://localhost:5000/api/auth/user", {
@@ -45,11 +46,17 @@ export const AuthProvider = ({ children }) => {
 
   const signup = async (username, email, password) => {
     try {
-      await axios.post("http://localhost:5000/api/auth/signup", { username, email, password });
+      const response = await axios.post("http://localhost:5000/api/auth/signup", { username, email, password });
+      localStorage.setItem("token", response.data.token);
+      setIsLoggedIn(true);
+      setUser(response.data.user);
+      return response.data;
     } catch (error) {
-      console.error("Signup failed:", error.response.data.message);
-      throw error.response.data.message;
-    }
+    const errorMessage = error.response?.data?.details?.message || 
+                        error.response?.data?.error ||
+                        'Signup failed';
+    throw errorMessage;
+  }
   };
 
   const logout = () => {

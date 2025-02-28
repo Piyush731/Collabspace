@@ -44,9 +44,8 @@ const Dashboard = () => {
     const fetchRepos = async () => {
       try {
         const token = localStorage.getItem("token");
-        if (!token) throw new Error("No token found");
-
-        const reposRes = await api.get("http://localhost:5000/api/repos/my-repos", {
+        if (!token) throw new Error("No token found"); 
+        const reposRes = await axios.get("http://localhost:5000/api/repos/my-repos", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setRepos(reposRes.data);
