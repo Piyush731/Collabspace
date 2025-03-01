@@ -57,7 +57,7 @@ io.on('connection', (socket) => {
         _id: repoId,
         $or: [
           { owner: socket.user._id },
-          { members: socket.user._id }
+          { 'collaborators.user': socket.user._id}
         ]
       });
 

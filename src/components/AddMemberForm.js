@@ -11,11 +11,13 @@ const AddMemberForm = ({ repoId }) => {
     try {
       const token = localStorage.getItem('token');
       await axios.post(
-        'http://localhost:5000/api/teams/collaborators',
+        'http://localhost:5000/api/collaborators',
         { repoId, username, permission },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       alert('Member added successfully!');
+      setUsername('');  //temp state true
+      setPermission('read');
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to add member');
     }

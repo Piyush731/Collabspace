@@ -1,6 +1,7 @@
 // frontend/src/pages/RepositoryView.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react'; 
 import { useParams, useNavigate } from 'react-router-dom';
+
 import { io } from 'socket.io-client';
 import { motion } from 'framer-motion';
 import { Dialog } from '@headlessui/react'
@@ -10,6 +11,8 @@ import AddMemberForm from '../components/AddMemberForm';
 import BranchSelector from '../components/BranchSelector';
 import CommitHistory from '../components/CommitHistory';
 import RepoActions from '../components/RepoActions';
+import GitActions from '../components/GitActions';
+import CommitDialog from '../components/CommitDialog';
 import { useAuth } from '../context/AuthContext';
 
 const RepositoryView = () => {
@@ -21,6 +24,8 @@ const RepositoryView = () => {
   const [activeBranch, setActiveBranch] = useState('main');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [actionType, setActionType] = useState('');
+  const [showCommitDialog, setShowCommitDialog] = useState(false);
+  const [changes, setChanges] = useState([]);
   const { repoId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -112,6 +117,41 @@ const RepositoryView = () => {
       */ 
   };
 
+  const handleCommit = async (message) => {
+    try {
+      const response = await fetch(`/api/repos/${repoId}/commit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          message,
+          content: code,
+          branch: activeBranch
+        })
+      });
+      
+      if (response.ok) {
+        toast.success('Changes committed successfully');
+        setShowCommitDialog(false);
+      }
+    } catch (error) {
+      toast.error('Commit failed');
+    }
+  };
+
+  const handlePush = async () => {
+    // Implement push logic using Gitea API
+  };
+
+  const handlePull = async () => {
+    // Implement pull logic using Gitea API
+  };
+
+
+
+
   if (!repoData) return <div className="p-4 text-gray-600">Loading repository...</div>;
    
   const Header = () => (
@@ -152,6 +192,18 @@ const RepositoryView = () => {
           onAction={handleRepositoryAction}
           onCloneSuccess={() => toast.success('Clone URL copied to clipboard! 📋')}
         />
+         <>
+      <GitActions
+        onCommit={() => setShowCommitDialog(true)}
+        onPush={handlePush}
+        onPull={handlePull}
+      />
+      <CommitDialog
+        isOpen={showCommitDialog}
+        onClose={() => setShowCommitDialog(false)}
+        onCommit={handleCommit}
+      />
+    </>
       </div>
     </motion.header>
   );

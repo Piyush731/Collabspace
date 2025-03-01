@@ -13,6 +13,7 @@ import AuthNavbar from "./components/AuthNavbar";
 import UserNavbar from "./components/UserNavbar";
 import Footer from './components/Footer';
 import ContactUs from './pages/ContactUs';
+import './styles/custom-animations.css';
 import Login from "./pages/login";
 import Signup from "./pages/signup";
 import Sidebar  from './components/sidebar';
@@ -39,7 +40,7 @@ function App() {
       ) : (
         <Navbar /> // Default navbar
       )}
-        <div className="content">
+        <div className="content ">
           <Routes>
             <Route path="/" element={<Homepage />} />
             <Route path="/dashboard" element={<Dashboard />} />

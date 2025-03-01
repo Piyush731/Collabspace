@@ -1,71 +1,97 @@
-import React from "react";
-import { Link as ScrollLink } from "react-scroll"; // Import Scroll Link
-import "../styles/Navbar.css";
+import React, { useState, useEffect }  from "react";
+import { Link as ScrollLink } from "react-scroll"; // Import Scroll Link 
 import { Link } from 'react-router-dom';
 
 function Navbar() {
+  const [lastScrollY, setLastScrollY] = useState(0);
+  const [isVisible, setIsVisible] = useState(true);
+
+  // Detect scroll direction
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > lastScrollY) {
+        setIsVisible(false); // Hide when scrolling down
+      } else {
+        setIsVisible(true); // Show when scrolling up
+      }
+      setLastScrollY(window.scrollY);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [lastScrollY]);
+
   return (
-    <nav className="navbar">
-      <div className="navbar-left">
-        <div className="navbar-logo">
-          <ScrollLink
-            to="Hero"
-            smooth={true}
-            duration={500}
-            className="navbar-logo-link"
-          >
-            CollabSpace
-          </ScrollLink>
-        </div>
-        <div className="navbar-links">
-          <ul>
-            <li>
-              <ScrollLink
-                to="features"
-                smooth={true}
-                duration={500}
-                spy={true}
-                activeClass="active"
-              >
-                Features
-              </ScrollLink>
-            </li>
-            <li>
-              <ScrollLink
-                to="pricing"
-                smooth={true}
-                duration={500}
-                spy={true}
-                activeClass="active"
-              >
-                Pricing
-              </ScrollLink>
-            </li>
-            <li>
-              <ScrollLink
-                to="contact"
-                smooth={true}
-                duration={500}
-                spy={true}
-                activeClass="active"
-              >
-                Contact
-              </ScrollLink>
-            </li>
-          </ul>
-        </div>
+    <nav
+      className={`fixed top-0 left-0 w-full z-50 backdrop-blur-lg bg-slate-900/50 border-b border-slate-700 py-3 transition-transform duration-300 ${
+        isVisible ? "translate-y-0" : "-translate-y-full"
+      }`}
+    >
+    <div className="container mx-auto px-6 flex justify-between items-center">
+      {/* Left Section - Logo */}
+      <div className="flex items-center">
+        <ScrollLink
+          to="Hero"
+          smooth={true}
+          duration={500}
+          className="text-2xl font-bold text-indigo-400 hover:text-indigo-300 cursor-pointer transition-colors"
+        >
+          CollabSpace
+        </ScrollLink>
       </div>
-      <div className="navbar-right">
-      {/* Use React Router's Link component */}
-      <Link to= "/login" className="login-btn">
-        Log In
-      </Link>
-      <Link to="/signup" className="signup-btn">
-        Sign Up
-      </Link>
+
+      {/* Middle Section - Links */}
+      <div className="hidden md:flex items-center space-x-8">
+        <ScrollLink
+          to="features"
+          smooth={true}
+          duration={500}
+          spy={true}
+          activeClass="text-indigo-400"
+          className="text-gray-300 hover:text-indigo-400 cursor-pointer transition-colors"
+        >
+          Features
+        </ScrollLink>
+        <ScrollLink
+          to="pricing"
+          smooth={true}
+          duration={500}
+          spy={true}
+          activeClass="text-indigo-400"
+          className="text-gray-300 hover:text-indigo-400 cursor-pointer transition-colors"
+        >
+          Pricing
+        </ScrollLink>
+        <ScrollLink
+          to="contact"
+          smooth={true}
+          duration={500}
+          spy={true}
+          activeClass="text-indigo-400"
+          className="text-gray-300 hover:text-indigo-400 cursor-pointer transition-colors"
+        >
+          Contact
+        </ScrollLink>
+      </div>
+
+      {/* Right Section - Buttons */}
+      <div className="flex items-center space-x-4">
+        <Link
+          to="/login"
+          className="px-4 py-2 text-indigo-400 border border-indigo-500 rounded-xl hover:bg-indigo-600/20 transition-colors"
+        >
+          Log In
+        </Link>
+        <Link
+          to="/signup"
+          className="px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors"
+        >
+          Sign Up
+        </Link>
+      </div>
     </div>
-    </nav>
-  );
+  </nav>
+);
 }
 
 export default Navbar;

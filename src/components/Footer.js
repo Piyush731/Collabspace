@@ -1,11 +1,13 @@
-// src/components/Footer.js
 import React from 'react';
-import '../styles/Footer.css';
 
 function Footer() {
   return (
-    <footer className="footer">
-      <p>© 2024 CollabSpace. All Rights Reserved.</p>
+    <footer className="w-full bg-gradient-to-b from-slate-900 to-slate-800 border-t border-slate-700">
+      <div className="container mx-auto px-4 py-2 text-center">
+        <p className="text-gray-400">
+          © 2024 CollabSpace. All Rights Reserved.
+        </p>
+      </div>
     </footer>
   );
 }

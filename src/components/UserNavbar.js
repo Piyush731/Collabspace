@@ -1,14 +1,27 @@
-// src/components/UserNavbar.js
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import "../styles/UserNavbar.css";
+import { motion } from "framer-motion";
+import "../styles/UserNavbar.css";  
 
 const UserNavbar = () => {
   const { logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
-
+  const [lastScrollY, setLastScrollY] = useState(0);
+  const [isVisible, setIsVisible] = useState(true);
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > lastScrollY) {
+        setIsVisible(false);
+      } else {
+        setIsVisible(true);
+      }
+      setLastScrollY(window.scrollY);
+    }; 
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [lastScrollY]);
+  
   const toggleMenu = () => {
     setMenuOpen(!menuOpen);
   };
@@ -107,3 +120,6 @@ const UserNavbar = () => {
 };
 
 export default UserNavbar;
+
+
+
