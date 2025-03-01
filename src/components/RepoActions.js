@@ -23,7 +23,7 @@ const RepoActions = ({ repoId, cloneUrl }) => {
   };
 
   return (
-    <div className="flex space-x-2">
+    <div className="flex space-x-2 mt-4">
       <button
         onClick={handleCopyClone}
         className="flex items-center px-3 py-1 border rounded-md hover:bg-gray-100 text-sm"

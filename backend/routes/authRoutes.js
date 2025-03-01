@@ -46,6 +46,10 @@ router.post("/signup", async (req, res) => {
       if (!/^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/.test(email)) {
         return res.status(400).json({ error: 'Invalid email format' });
       }
+      if (!password || password.length < 6) {
+        return res.status(400).json({ error: 'Password is required and must be at least 6 characters' });
+        console.log("Password is required and must be at least 6 characters");
+      }
            //delete if exist gitea user
            try {
       await axios.delete(
@@ -60,7 +64,8 @@ router.post("/signup", async (req, res) => {
     console.log("Creating Gitea user...");
        // 1. First create Gitea user
       giteaUser = await axios.post(`${GITEA_URL}/api/v1/admin/users`,
-         { username : sanitizedUsername, email, password: password, login_name: sanitizedUsername,  send_notify: false  }, 
+         { username : sanitizedUsername, email, password: password, login_name: sanitizedUsername,  send_notify: false,
+          source_id: 0 }, 
          { headers: { Authorization: `token ${GITEA_ADMIN_TOKEN}`}}
      );
      console.log("Gitea user created successfully:", giteaUser.data);

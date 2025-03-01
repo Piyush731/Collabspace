@@ -74,10 +74,13 @@ exports.getRepository = async (req, res) => {
       } 
        const owner = await User.findById(repo.owner); 
     // Get Gitea data
-    const [branches, commits] = await Promise.all([
-      axios.get(`${process.env.GITEA_URL}/api/v1/repos/${owner.username}/${repo.name}/branches`),
-      axios.get(`${process.env.GITEA_URL}/api/v1/repos/${owner.username}/${repo.name}/commits`)
-    ]);
+   // Handle Gitea API errors
+   const [branches, commits] = await Promise.all([
+    axios.get(`${process.env.GITEA_URL}/api/v1/repos/${owner.username}/${repo.name}/branches`)
+      .catch(() => ({ data: [] })), // Return empty array on error
+    axios.get(`${process.env.GITEA_URL}/api/v1/repos/${owner.username}/${repo.name}/commits`)
+      .catch(() => ({ data: [] }))
+  ]);
    //combined data returned
     res.json({
       metadata: repo.toObject(),

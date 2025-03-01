@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 const RepositoryCard = ({ repo }) => { 
   const navigate = useNavigate(); 
   const handleNavigate = () => {
-    navigate(`/repositories/${repo._id}`); // Navigate to repository view page
+    navigate(`/repo/${repo._id}`); // Navigate to repository view page
   };
   return (
     <motion.div

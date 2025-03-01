@@ -19,6 +19,7 @@ import Sidebar  from './components/sidebar';
 import 'bootstrap-icons/font/bootstrap-icons.css'; 
 import './styles/App.css';
 import CreateRepo from "./pages/CreateRepo";
+import RepositoryView from './pages/RepositoryView';
 
 function App() {
   const location = useLocation(); // Safe to use here as it's inside Router
@@ -52,6 +53,7 @@ function App() {
             <Route path="/sidebar" element={<Sidebar />} /> 
             <Route path="/create-repo" element={<CreateRepo />} />
             <Route path="*" element={<div>Page Not Found</div>} />
+            <Route path="/repo/:repoId" element={<RepositoryView />} />
           </Routes>
         </div>
         <Footer />
