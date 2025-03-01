@@ -113,47 +113,46 @@ function Homepage() {
             </div>
           </motion.div>
         </Container>
-      </section>
+      </section> 
 
-      {/* Features Section - Enhanced with reveal animations */}
-      <section id="features" className="py-20 w-full">
-        <Container fluid className="px-0">
-          <div className="reveal-animation">
+      {/* Features Section - Enhanced with glass effects and border styling */}
+<section id="features" className="w-full py-20 relative">
+  <div className="absolute inset-0 bg-gradient-to-r from-indigo-600/20 to-blue-600/20"></div>
+  <Container fluid>
+    <motion.div 
+      initial={{ opacity: 0 }}
+      whileInView={{ opacity: 1 }}
+      viewport={{ once: true }}
+      className="glass-effect backdrop-blur-lg rounded-2xl p-12 border border-slate-700"
+    >
+      <div className="text-center mb-20">
+        <h2 className="text-4xl font-bold mb-4 animated-gradient-text">Powerful Features</h2>
+        <p className="text-gray-400 max-w-2xl mx-auto">
+          Everything you need to manage, collaborate, and succeed
+        </p>
+      </div>
+
+      <Row className="gap-8 justify-center">
+        {features.map((feature, index) => (
+          <Col md={4} key={index}>
             <motion.div
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              variants={fadeIn}
-              className="text-center mb-20"
+              initial={{ x: -50, opacity: 0 }}
+              whileInView={{ x: 0, opacity: 1 }}
+              transition={{ delay: index * 0.2 }}
+              className="glass-effect p-8 rounded-2xl border border-slate-700 hover:border-indigo-500 transition-colors"
             >
-              <h2 className="text-4xl font-bold mb-4 animated-gradient-text">Powerful Features</h2>
-              <p className="text-gray-400 max-w-2xl mx-auto">
-                Everything you need to manage, collaborate, and succeed
-              </p>
+              <div className="text-4xl text-indigo-500 mb-4 animate-float">
+                {feature.icon}
+              </div>
+              <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
+              <p className="text-gray-400">{feature.text}</p>
             </motion.div>
-          </div>
-
-          <Row className="gap-8">
-            {features.map((feature, index) => (
-              <Col md={4} key={index}>
-                {/* Added glass effect and reveal animation */}
-                <div className="reveal-animation">
-                  <motion.div
-                    whileHover={{ y: -10 }}
-                    className="glass-effect hover-scale p-8 ml-5 rounded-xl transition-all"
-                  >
-                    <div className="text-4xl text-indigo-500 mb-4 animate-float">
-                      {feature.icon}
-                    </div>
-                    <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
-                    <p className="text-gray-400">{feature.text}</p>
-                  </motion.div>
-                </div>
-              </Col>
-            ))}
-          </Row>
-        </Container>
-      </section>
+          </Col>
+        ))}
+      </Row>
+    </motion.div>
+  </Container>
+</section> 
 
       {/* Pricing Section - Enhanced with glass effects */}
       <section className="w-full py-20 bg-slate-900/50">
