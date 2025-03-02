@@ -13,9 +13,10 @@ const CreateRepo = () => {
     e.preventDefault();
     try {
       const token = localStorage.getItem("token");
+      const REACT_APP_API_URL= process.env.REACT_APP_API_URL;
       if (!token) throw new Error("No token found"); 
       const response = await axios.post(
-        "http://localhost:5000/api/repos",
+        `${REACT_APP_API_URL}/api/repos`,
         { name, description, visibility },
         { headers: { Authorization: `Bearer ${token}` } }
       );

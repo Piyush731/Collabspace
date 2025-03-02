@@ -46,7 +46,9 @@ const [stats, setStats] = useState({ stars: 0, forks: 0, issues: 0 });
 const [currentPath, setCurrentPath] = useState('');    //files
 const [isLoading, setIsLoading] = useState(false);
 const [isFileLoading, setIsFileLoading] = useState(false);
-  const socket = io(process.env.REACT_APP_API_URL,  {
+const REACT_APP_API_URL= process.env.REACT_APP_API_URL;
+
+  const socket = io(REACT_APP_API_URL,  {
     auth: {
       token: localStorage.getItem('token')
     }
@@ -58,14 +60,14 @@ const [isFileLoading, setIsFileLoading] = useState(false);
     const itemVariants = {
       hidden: { y: 20, opacity: 0 },
       visible: { y: 0, opacity: 1 }
-    };
-  
+    }; 
+
   // Fetch repository metadata and Gitea data
   useEffect(() => {
     const fetchRepoData = async () => {
       try {
         const token = localStorage.getItem('token'); 
-        const repoRes = await fetch(`http://localhost:5000/api/repos/${repoId}`, {
+        const repoRes = await fetch(`${REACT_APP_API_URL}/api/repos/${repoId}`, {
           headers: { Authorization: `Bearer ${token}` }
           });
         if (!repoRes.ok) throw new Error('Failed to fetch repository');
@@ -94,7 +96,7 @@ const fetchDirectoryContents = async (branch, path = '') => {
     const token = localStorage.getItem('token');
     const encodedURI=encodeURIComponent(path)
     const res = await fetch(
-      `${process.env.REACT_APP_API_URL}/api/repos/${repoId}/contents?path=${encodedURI}&ref=${branch}`,
+      `${REACT_APP_API_URL}/api/repos/${repoId}/contents?path=${encodedURI}&ref=${branch}`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
     if (!res.ok) throw new Error('Invalid response'); 
@@ -115,10 +117,9 @@ const fetchDirectoryContents = async (branch, path = '') => {
 const handleCreateFile = async ({ path, isDirectory, content }) => {
   try {
     const token = localStorage.getItem('token');  
-    const baseUrl = process.env.REACT_APP_API_URL;
     const endpoint = isDirectory 
-    ? `${baseUrl}/api/repos/${repoId}/directories`
-    : `${baseUrl}/api/repos/${repoId}/files`;
+    ? `${REACT_APP_API_URL}/api/repos/${repoId}/directories`
+    : `${REACT_APP_API_URL}/api/repos/${repoId}/files`;
 
     const response = await fetch(endpoint, {
       method: 'POST',
@@ -151,7 +152,7 @@ const fetchFileContent = async (file) => {
     const token = localStorage.getItem('token');
     const filepath=encodeURIComponent(file.path);
     const res = await fetch(
-      `${process.env.REACT_APP_API_URL}/api/repos/${repoId}/contents/${filepath}}?ref=${activeBranch}`,
+      `${REACT_APP_API_URL}/api/repos/${repoId}/contents/${filepath}}?ref=${activeBranch}`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
     const data = await res.json(); 
