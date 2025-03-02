@@ -46,7 +46,7 @@ const [stats, setStats] = useState({ stars: 0, forks: 0, issues: 0 });
 const [currentPath, setCurrentPath] = useState('');    //files
 const [isLoading, setIsLoading] = useState(false);
 const [isFileLoading, setIsFileLoading] = useState(false);
-const REACT_APP_API_URL= process.env.REACT_APP_API_URL;
+const API_URL= process.env.REACT_APP_API_URL;
 
   const socket = io(REACT_APP_API_URL,  {
     auth: {
@@ -67,7 +67,7 @@ const REACT_APP_API_URL= process.env.REACT_APP_API_URL;
     const fetchRepoData = async () => {
       try {
         const token = localStorage.getItem('token'); 
-        const repoRes = await fetch(`${REACT_APP_API_URL}/api/repos/${repoId}`, {
+        const repoRes = await fetch(`${API_URL}/api/repos/${repoId}`, {
           headers: { Authorization: `Bearer ${token}` }
           });
         if (!repoRes.ok) throw new Error('Failed to fetch repository');
@@ -96,7 +96,7 @@ const fetchDirectoryContents = async (branch, path = '') => {
     const token = localStorage.getItem('token');
     const encodedURI=encodeURIComponent(path)
     const res = await fetch(
-      `${REACT_APP_API_URL}/api/repos/${repoId}/contents?path=${encodedURI}&ref=${branch}`,
+      `${API_URL}/api/repos/${repoId}/contents?path=${encodedURI}&ref=${branch}`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
     if (!res.ok) throw new Error('Invalid response'); 
@@ -118,8 +118,8 @@ const handleCreateFile = async ({ path, isDirectory, content }) => {
   try {
     const token = localStorage.getItem('token');  
     const endpoint = isDirectory 
-    ? `${REACT_APP_API_URL}/api/repos/${repoId}/directories`
-    : `${REACT_APP_API_URL}/api/repos/${repoId}/files`;
+    ? `${API_URL}/api/repos/${repoId}/directories`
+    : `${API_URL}/api/repos/${repoId}/files`;
 
     const response = await fetch(endpoint, {
       method: 'POST',
@@ -152,7 +152,7 @@ const fetchFileContent = async (file) => {
     const token = localStorage.getItem('token');
     const filepath=encodeURIComponent(file.path);
     const res = await fetch(
-      `${REACT_APP_API_URL}/api/repos/${repoId}/contents/${filepath}}?ref=${activeBranch}`,
+      `${API_URL}/api/repos/${repoId}/contents/${filepath}}?ref=${activeBranch}`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
     const data = await res.json(); 
