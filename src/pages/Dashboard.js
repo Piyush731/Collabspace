@@ -14,14 +14,14 @@ const Dashboard = () => {
   const [repoLoading, setRepoLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const navigate = useNavigate();
-
+ const API_URL=process.env.REACT_APP_API_URL;
   useEffect(() => {
     const fetchUserData = async () => {
       try {
         const token = localStorage.getItem("token");
-        const REACT_APP_API_URL= process.env.REACT_APP_API_URL;
+        
         if (!token) throw new Error("No token found");
-        const response = await axios.get(`${REACT_APP_API_URL}/api/auth/user`, {
+        const response = await axios.get(`${API_URL}/api/auth/user`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setUser(response.data.user);
@@ -44,7 +44,7 @@ const Dashboard = () => {
       try {
         const token = localStorage.getItem("token");
         if (!token) throw new Error("No token found");
-        const reposRes = await axios.get(`${REACT_APP_API_URL}/api/repos/my-repos`, {
+        const reposRes = await axios.get(`${API_URL}/api/repos/my-repos`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setRepos(reposRes.data);
