@@ -10,8 +10,9 @@ export const AuthProvider = ({ children }) => {
 
  useEffect(() => {
   const checkAuth = async () => {
-    const token = localStorage.getItem("token");
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
     const REACT_APP_API_URL= process.env.REACT_APP_API_URL;
+
     if (!token) return setLoading(false);
     if (token) { 
       try {
