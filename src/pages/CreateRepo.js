@@ -8,15 +8,15 @@ const CreateRepo = () => {
   const [visibility, setVisibility] = useState("private");
   const [error, setError] = useState("");
   const navigate = useNavigate();
-
+ const API_URL=process.env.REACT_APP_API_URL;
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       const token = localStorage.getItem("token");
-      const REACT_APP_API_URL= process.env.REACT_APP_API_URL;
+   
       if (!token) throw new Error("No token found"); 
       const response = await axios.post(
-        `${REACT_APP_API_URL}/api/repos`,
+        `${API_URL}/api/repos`,
         { name, description, visibility },
         { headers: { Authorization: `Bearer ${token}` } }
       );
