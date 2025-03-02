@@ -48,11 +48,7 @@ const [isLoading, setIsLoading] = useState(false);
 const [isFileLoading, setIsFileLoading] = useState(false);
 const API_URL= process.env.REACT_APP_API_URL;
 
-  const socket = io(API_URL)  {
-    auth: {
-      token: localStorage.getItem('token')
-    }
-  }); 
+  
     const containerVariants = {     // Animation variants
       hidden: { opacity: 0 },
       visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
