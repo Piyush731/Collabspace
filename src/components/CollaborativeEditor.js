@@ -5,9 +5,9 @@ import io from 'socket.io-client';
 const CollaborativeEditor = ({ repoId, user }) => {
   const editorRef = useRef(null);
   const socket = useRef(null);
-  const REACT_APP_API_URL= process.env.REACT_APP_API_URL;
+  const API_URL= process.env.REACT_APP_API_URL;
   useEffect(() => {
-    socket.current = io(`${REACT_APP_API_URL}`);
+    socket.current = io(`${API_URL=}`);
     socket.current.emit('join-repo', { repoId, userId: user._id });
 
     socket.current.on('code-update', ({ changes, userId }) => {
