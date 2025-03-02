@@ -15,7 +15,7 @@ const RepositoriesPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const navigate = useNavigate();
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen); 
-  const REACT_APP_API_URL= process.env.REACT_APP_API_URL;
+  const API_URL= process.env.REACT_APP_API_URL;
 
 
 
@@ -24,7 +24,7 @@ const RepositoriesPage = () => {
       try {
         const token = localStorage.getItem("token");
         if (!token) throw new Error("No token found");
-        const response = await axios.get(`${REACT_APP_API_URL}/api/auth/user`, {
+        const response = await axios.get(`${API_URL}/api/auth/user`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setUser(response.data.user);
@@ -46,7 +46,7 @@ useEffect(() => {
           try {
             const token = localStorage.getItem("token");
             if (!token) throw new Error("No token found");
-            const reposRes = await axios.get(`${REACT_APP_API_URL}/api/repos/my-repos`, {
+            const reposRes = await axios.get(`${API_URL}/api/repos/my-repos`, {
               headers: { Authorization: `Bearer ${token}` },
             });
             setRepos(reposRes.data);
