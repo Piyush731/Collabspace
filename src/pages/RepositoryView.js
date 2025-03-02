@@ -1,4 +1,4 @@
-// frontend/src/pages/RepositoryView.js
+6// frontend/src/pages/RepositoryView.js
 import React, { useState, useEffect } from 'react'; 
 import { useParams, useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
@@ -48,7 +48,7 @@ const [isLoading, setIsLoading] = useState(false);
 const [isFileLoading, setIsFileLoading] = useState(false);
 const API_URL= process.env.REACT_APP_API_URL;
 
-  const socket = io(REACT_APP_API_URL,  {
+  const socket = io(API_URL)  {
     auth: {
       token: localStorage.getItem('token')
     }
