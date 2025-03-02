@@ -5,13 +5,13 @@ const AddMemberForm = ({ repoId }) => {
   const [username, setUsername] = useState('');
   const [permission, setPermission] = useState('read');
   const [error, setError] = useState('');
-  const REACT_APP_API_URL= process.env.REACT_APP_API_URL;
+  const API_URL= process.env.REACT_APP_API_URL;
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
       await axios.post(
-        `${REACT_APP_API_URL}/api/collaborators`,
+        `${API_URL=}/api/collaborators`,
         { repoId, username, permission },
         { headers: { Authorization: `Bearer ${token}` } }
       );
