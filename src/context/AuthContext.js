@@ -7,11 +7,11 @@ export const AuthProvider = ({ children }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState(null);
  const [loading, setLoading] = useState(true);
-
+const API_URL= process.env.REACT_APP_API_URL;
  useEffect(() => {
   const checkAuth = async () => {
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-    const API_URL= process.env.REACT_APP_API_URL;
+    
 
     if (!token) return setLoading(false);
     if (token) { 
