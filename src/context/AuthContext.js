@@ -11,12 +11,12 @@ export const AuthProvider = ({ children }) => {
  useEffect(() => {
   const checkAuth = async () => {
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-    const REACT_APP_API_URL= process.env.REACT_APP_API_URL;
+    const API_URL= process.env.REACT_APP_API_URL;
 
     if (!token) return setLoading(false);
     if (token) { 
       try {
-        const response = await axios.get(`${REACT_APP_API_URL}/api/auth/user`, {
+        const response = await axios.get(`${API_URL}/api/auth/user`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setIsLoggedIn(true);
@@ -36,7 +36,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const response = await axios.post(`${REACT_APP_API_URL}/api/auth/login`, { email, password });
+      const response = await axios.post(`${API_URL}/api/auth/login`, { email, password });
       localStorage.setItem("token", response.data.token);
       setIsLoggedIn(true);
       setUser(response.data.user);
@@ -48,7 +48,7 @@ export const AuthProvider = ({ children }) => {
 
   const signup = async (username, email, password) => {
     try {
-      const response = await axios.post(`${REACT_APP_API_URL}/api/auth/signup`, { username, email, password });
+      const response = await axios.post(`${API_URL}/api/auth/signup`, { username, email, password });
       localStorage.setItem("token", response.data.token);
       setIsLoggedIn(true);
       setUser(response.data.user);
