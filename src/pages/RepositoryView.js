@@ -1,7 +1,12 @@
 // frontend/src/pages/RepositoryView.js
 import React, { useState, useEffect } from 'react'; 
 import { useParams, useNavigate } from 'react-router-dom';
-
+import ReactMarkdown from 'react-markdown';
+import SyntaxHighlighter from 'react-syntax-highlighter';
+import { githubGist } from 'react-syntax-highlighter/dist/esm/styles/hljs';
+import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
+import 'react-tabs/style/react-tabs.css';
+import FileTree from '../components/FileTree';
 import { io } from 'socket.io-client';
 import { motion } from 'framer-motion';
 import { Dialog } from '@headlessui/react'
@@ -13,7 +18,9 @@ import CommitHistory from '../components/CommitHistory';
 import RepoActions from '../components/RepoActions';
 import GitActions from '../components/GitActions';
 import CommitDialog from '../components/CommitDialog';
+import FileActions from '../components/FileActions';
 import { useAuth } from '../context/AuthContext';
+import ErrorBoundary from '../components/ErrorBoundary';
 
 const RepositoryView = () => {
   const [code, setCode] = useState('');
@@ -29,6 +36,16 @@ const RepositoryView = () => {
   const { repoId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState(0);
+const [fileContent, setFileContent] = useState('');
+const [currentDir, setCurrentDir] = useState([]);
+const [issues, setIssues] = useState([]);
+const [prs, setPrs] = useState([]);
+const [readmeContent, setReadmeContent] = useState('');
+const [stats, setStats] = useState({ stars: 0, forks: 0, issues: 0 });
+const [currentPath, setCurrentPath] = useState('');    //files
+const [isLoading, setIsLoading] = useState(false);
+const [isFileLoading, setIsFileLoading] = useState(false);
   const socket = io(process.env.REACT_APP_API_URL,  {
     auth: {
       token: localStorage.getItem('token')
@@ -48,16 +65,19 @@ const RepositoryView = () => {
     const fetchRepoData = async () => {
       try {
         const token = localStorage.getItem('token'); 
-        // Fetch repo combine data from our backend
         const repoRes = await fetch(`http://localhost:5000/api/repos/${repoId}`, {
           headers: { Authorization: `Bearer ${token}` }
-        });
+          });
         if (!repoRes.ok) throw new Error('Failed to fetch repository');
         const repoJson = await repoRes.json();
-        setRepoData(repoJson.metadata); 
+        setRepoData(repoJson.metadata);
         setBranches(repoJson.gitData.branches);
         setCommits(repoJson.gitData.commits);
-
+        setIssues(repoJson.gitData.issues);
+        setPrs(repoJson.gitData.prs);
+        setStats(repoJson.gitData.stats);
+        setReadmeContent(repoJson.gitData.readme?.content || '');
+        fetchDirectoryContents(activeBranch);
       } catch (error) {
         console.error('Error loading repository:', error);
         navigate('/dashboard');
@@ -66,7 +86,101 @@ const RepositoryView = () => {
 
     if (user) fetchRepoData();
   }, [repoId, user, navigate]);
-  // Handle actions with modal
+  
+  // directory fetching function
+const fetchDirectoryContents = async (branch, path = '') => {
+  try {
+    setIsLoading(true);
+    const token = localStorage.getItem('token');
+    const encodedURI=encodeURIComponent(path)
+    const res = await fetch(
+      `${process.env.REACT_APP_API_URL}/api/repos/${repoId}/contents?path=${encodedURI}&ref=${branch}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    if (!res.ok) throw new Error('Invalid response'); 
+    const data = await res.json();
+    setCurrentDir(data.map(item => ({
+      ...item,
+      path: `${path ? `${path}/` : ''}${item.name}`
+    })));
+    setCurrentPath(path);
+  } catch (error) {
+    console.error('Error fetching directory:', error);
+  } finally {
+    setIsLoading(false);
+  }
+ };
+
+ // Add file/directory creation handler
+const handleCreateFile = async ({ path, isDirectory, content }) => {
+  try {
+    const token = localStorage.getItem('token');  
+    const baseUrl = process.env.REACT_APP_API_URL;
+    const endpoint = isDirectory 
+    ? `${baseUrl}/api/repos/${repoId}/directories`
+    : `${baseUrl}/api/repos/${repoId}/files`;
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        path,
+        content: isDirectory ? '' : content,
+        branch: activeBranch
+      })
+    });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Request failed');
+    }
+    if (response.ok) {
+      toast.success(`${isDirectory ? 'Directory' : 'File'} created successfully`);
+      fetchDirectoryContents(activeBranch, currentPath);
+    }
+  } catch (error) {
+    toast.error(`Failed to create ${isDirectory ? 'directory' : 'file'}`);
+  }
+};
+
+ // file content fetching
+const fetchFileContent = async (file) => {
+  try {
+    const token = localStorage.getItem('token');
+    const filepath=encodeURIComponent(file.path);
+    const res = await fetch(
+      `${process.env.REACT_APP_API_URL}/api/repos/${repoId}/contents/${filepath}}?ref=${activeBranch}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    const data = await res.json(); 
+    const content = Buffer.from(data.content, 'base64').toString();
+    setFileContent(content);
+    setCode(content); // Connect to editor
+  } catch (error) {
+    console.error('Error fetching file:', error);
+  }
+ };
+ //Stats Component
+const StatsWidget = () => (
+  <div className="flex gap-4 mb-6">
+    <div className="bg-white p-4 rounded-lg shadow-sm border flex items-center gap-2">
+      <span>⭐</span>
+      <span className="font-semibold">{stats.stars} Stars</span>
+    </div>
+    <div className="bg-white p-4 rounded-lg shadow-sm border flex items-center gap-2">
+      <span>🍴</span>
+      <span className="font-semibold">{stats.forks} Forks</span>
+    </div>
+    <div className="bg-white p-4 rounded-lg shadow-sm border flex items-center gap-2">
+      <span>⚠️</span>
+      <span className="font-semibold">{stats.issues} Open Issues</span>
+    </div>
+  </div> 
+ );
+
+ //old Apis
   const handleRepositoryAction = (action) => {
     setActionType(action);
     setIsModalOpen(true);
@@ -103,7 +217,7 @@ const RepositoryView = () => {
 
   const handleBranchChange = async (branch) => {
     setActiveBranch(branch);
-    /* try {
+     try {
       const token = localStorage.getItem('token');
       const res = await fetch(`${process.env.REACT_APP_API_URL}/api/gitea/${repoId}/branches/${branch}`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -111,10 +225,11 @@ const RepositoryView = () => {
       const data = await res.json();
       setCode(data.content);
       setActiveBranch(branch);
+      fetchDirectoryContents(branch); 
     } catch (error) {
       console.error('Error switching branch:', error);
-    }
-      */ 
+    toast.error('Failed to switch branch');
+    } 
   };
 
   const handleCommit = async (message) => {
@@ -142,21 +257,42 @@ const RepositoryView = () => {
   };
 
   const handlePush = async () => {
-    // Implement push logic using Gitea API
+    try {
+      const response = await fetch(`/api/repos/${repoId}/push`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      if (response.ok) toast.success('Changes pushed successfully');
+    } catch (error) {
+      toast.error('Push failed');
+    }
   };
 
   const handlePull = async () => {
-    // Implement pull logic using Gitea API
-  };
-
-
-
+    try {
+      const response = await fetch(`/api/repos/${repoId}/pull`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setCode(data.content);
+        toast.success('Changes pulled successfully');
+      }
+    } catch (error) {
+      toast.error('Pull failed');
+    }
+  }; 
 
   if (!repoData) return <div className="p-4 text-gray-600">Loading repository...</div>;
    
   const Header = () => (
     <motion.header 
-      className="bg-gradient-to-r from-blue-50 to-indigo-50 shadow-sm p-6 border-b border-gray-200"
+      className="bg-gradient-to-r from-blue-50 to-indigo-50 shadow-sm p-6 border-b border-gray-200 mt-4"
       variants={itemVariants}
     >
       <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -234,123 +370,119 @@ const RepositoryView = () => {
 
   return (
     <div className="flex flex-col h-screen">
-    {/* Main Content - Flex container for header, editor, and side panel */}
-    <div className="flex flex-1 overflow-hidden">
-      {/* Left Side - Header and IDE Editor */}
-      <div className="flex-1 flex flex-col mt-3">
-        {/* Header */}
-        <header className="bg-white shadow-lg border-b border-gray-100">
-          <div className="p-6">
-            <div className="flex items-start justify-between gap-6">
-              {/* Left Content */}
-              <div className="flex-1 space-y-4">
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  {repoData.name}
-                </h1>
+    {/* Header */}
+    <Header />
 
-                <p className="text-lg text-gray-600 leading-relaxed">
-                  {repoData.description || (
-                    <span className="text-gray-400 italic">No description provided</span>
-                  )}
-                </p>
+    <div className="flex-1 flex overflow-hidden">
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <Tabs selectedIndex={activeTab} onSelect={setActiveTab} className="flex-1 flex flex-col">
+          <TabList className="flex border-b">
+            <Tab className="px-4 py-2 cursor-pointer">Code</Tab>
+            <Tab className="px-4 py-2 cursor-pointer">Issues ({issues.length})</Tab>
+            <Tab className="px-4 py-2 cursor-pointer">PRs ({prs.length})</Tab>
+            <Tab className="px-4 py-2 cursor-pointer">Commits</Tab>
+            <Tab className="px-4 py-2 cursor-pointer">README</Tab>
+          </TabList>
 
-                <div className="flex flex-wrap items-center gap-4 mt-2">
-                  {/* Visibility Badge */}
-                  <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-100 text-blue-600">
-                    {repoData.visibility === 'private' ? '🔒 Private' : '🌍 Public'}
-                  </span>
-
-                  {/* Last Updated */}
-                  <div className="flex items-center text-sm text-gray-500">
-                    <span className="mr-1.5">⏳</span>
-                    Updated {new Date(repoData.updatedAt).toLocaleDateString()}
-                  </div>
-
-                  {/* Branch Selector */}
-                  <div className="flex items-center bg-white border border-gray-200 rounded-lg px-3 py-1.5">
-                    <BranchSelector
-                      branches={branches}
-                      activeBranch={activeBranch}
-                      onChange={handleBranchChange}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Right Actions */}
-              <div className="flex flex-col items-end gap-3">
-                <RepoActions
-                  repoId={repoId}
-                  cloneUrl={repoData.cloneUrl}
-                  className="mt-1.5"
-                />
-                <div
-                  className="flex items-center text-sm text-gray-600 hover:text-blue-600 cursor-pointer transition-colors"
-                  onClick={() => {
-                    navigator.clipboard.writeText(repoData.cloneUrl);
-                    toast.success('Clone URL copied!');
+          <TabPanel className="flex-1 overflow-auto p-4">
+            <StatsWidget />
+            <div className="grid grid-cols-4 gap-6 h-full">
+              {/* File Explorer */}
+              <div className="col-span-1 overflow-y-auto">
+              <FileTree
+                  contents={currentDir}
+                  onFileSelect={async (item) => {
+                    try {
+                      setIsFileLoading(true);
+                      await fetchFileContent(item);
+                    } finally {
+                      setIsFileLoading(false);
+                    }
                   }}
-                >
-                  <span className="mr-1.5">📋</span>
-                  Copy Clone URL
-                </div>
+                  
+                  currentPath={currentPath}
+                  onPathChange={(path) => {
+                    setCurrentPath(path);
+                    fetchDirectoryContents(activeBranch, path);
+                   }}
+                   isLoading={isLoading} 
+                   /> 
+                     <FileActions 
+                    path={currentPath} 
+                    onCreate={handleCreateFile} 
+                     /> 
               </div>
+              
+              
+              <div className="col-span-3 flex flex-col">
+  {isFileLoading ? (
+    <div className="flex-1 flex items-center justify-center">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+    </div>
+  ) : fileContent ? (
+    <Editor
+      height="100%"
+      language="javascript"
+      theme="vs-dark"
+      value={code}
+      onChange={handleCodeChange}
+      options={{
+        minimap: { enabled: true },
+        automaticLayout: true,
+        scrollBeyondLastLine: false
+      }}
+    />
+  ) : (
+    <div className="flex-1 flex items-center justify-center text-gray-500">
+      Select a file to edit
+    </div> )}
+    </div>
             </div>
-          </div>
-        </header>
+          </TabPanel>
 
-        {/* IDE Editor - Below Header */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <Editor
-            height="100%"
-            defaultLanguage="javascript"
-            theme="vs-dark"
-            value={code}
-            onChange={handleCodeChange}
-            options={{
-              minimap: { enabled: true },
-              automaticLayout: true,
-              scrollBeyondLastLine: false
-            }}
-          />
-        </div>
+          {/* Other Tab Panels remain the same as your previous implementation */}
+          <TabPanel className="p-4">
+            {/* Issues Content */}
+          </TabPanel>
+          
+          <TabPanel className="p-4">
+            {/* PRs Content */}
+          </TabPanel>
+
+          <TabPanel className="p-4">
+            <CommitHistory commits={commits} />
+          </TabPanel>
+
+          <TabPanel className="p-4 prose max-w-none">
+            {/* README Content */}
+          </TabPanel>
+        </Tabs>
       </div>
 
-      {/* Side Panel - Right Side */}
-      <div className="w-96 bg-white border-l flex flex-col mt-3">
-        {/* Collaborators Section */}
-        <div className="p-4 border-b">
-          <h2 className="text-lg font-semibold mb-3">Collaborators</h2>
-          <AddMemberForm repoId={repoId} />
-          <div className="mt-4 space-y-2">
-            {repoData.collaborators.map(collab => (
-              <div key={collab.user._id} className="flex items-center space-x-2">
-                <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                <span>{collab.user.username}</span>
-                <span className="text-xs text-gray-500">({collab.permission})</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Commit History */}
+      {/* Right Side Panel (Keep existing structure) */}
+      <div className="w-96 bg-white border-l flex flex-col">
+        <CollaboratorsSection />
         <div className="p-4 border-b flex-1 overflow-auto">
           <h2 className="text-lg font-semibold mb-3">Recent Commits</h2>
           <CommitHistory commits={commits} />
         </div>
-
-        {/* Chat Section */}
         <div className="p-4 flex-1 overflow-hidden">
           <h2 className="text-lg font-semibold mb-3">Chat</h2>
           <div className="h-full flex flex-col">
-            <div className="flex-1 overflow-y-auto mb-2">
-              {/* Chat messages would be rendered here */}
-            </div>
-            {/* Chat input would go here */}
+            {/* Chat implementation */}
           </div>
         </div>
       </div>
     </div>
+
+    {/* Action Modals */}
+    <CommitDialog
+      isOpen={showCommitDialog}
+      onClose={() => setShowCommitDialog(false)}
+      onCommit={handleCommit}
+    />
+    <Toaster position="bottom-right" />
   </div>
   );
 };

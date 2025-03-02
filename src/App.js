@@ -7,7 +7,10 @@ import Dashboard from './pages/Dashboard';
 import UserProfilePage from './pages/UserProfilePage';
 import Issues from './pages/Issues';
 import PullRequest from './pages/PullRequest';
-import Settings from './pages/Settings'
+import SettingsPage from './pages/SettingsPage'
+import ReportsPage from './pages/ReportsPage'
+import TasksPage from './pages/TasksPage';
+import RepositoriesPage from './pages/RepositoriesPage';
 import Navbar from './components/Navbar';
 import AuthNavbar from "./components/AuthNavbar";
 import UserNavbar from "./components/UserNavbar";
@@ -16,11 +19,12 @@ import ContactUs from './pages/ContactUs';
 import './styles/custom-animations.css';
 import Login from "./pages/login";
 import Signup from "./pages/signup";
-import Sidebar  from './components/sidebar';
+import Sidebar from "./components/sidebar";
 import 'bootstrap-icons/font/bootstrap-icons.css'; 
 import './styles/App.css';
 import CreateRepo from "./pages/CreateRepo";
-import RepositoryView from './pages/RepositoryView';
+import RepositoryView from './pages/RepositoryView'; 
+import ErrorBoundary from './components/ErrorBoundary';
 
 function App() {
   const location = useLocation(); // Safe to use here as it's inside Router
@@ -40,6 +44,7 @@ function App() {
       ) : (
         <Navbar /> // Default navbar
       )}
+      <ErrorBoundary>
         <div className="content ">
           <Routes>
             <Route path="/" element={<Homepage />} />
@@ -47,7 +52,10 @@ function App() {
             <Route path="/profile" element={<UserProfilePage />} />
             <Route path="/issues" element={<Issues />} />
             <Route path="/pull-requests" element={<PullRequest />} />
-            <Route path="/settings" element={<Settings />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/reports" element={<ReportsPage />} />
+            <Route path="/tasks" element={<TasksPage />} />
+            <Route path="/repositories" element={<RepositoriesPage />} />
             <Route path="/contact" element={<ContactUs />} /> 
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />  
@@ -57,6 +65,7 @@ function App() {
             <Route path="/repo/:repoId" element={<RepositoryView />} />
           </Routes>
         </div>
+        </ErrorBoundary>
         <Footer />
       </div>
   );

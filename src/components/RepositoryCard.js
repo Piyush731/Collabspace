@@ -10,14 +10,14 @@ const RepositoryCard = ({ repo }) => {
   return (
     <motion.div
       whileHover={{ scale: 1.03 }}
-      className="bg-white rounded-lg shadow-md p-6 cursor-pointer"
+      className="bg-white rounded-lg shadow-md p-6 cursor-pointer "
       onClick={handleNavigate}
     >
       <div className="flex items-center mb-4">
         <div className={`h-3 w-3 rounded-full mr-2 
           ${repo.visibility === 'private' ? 'bg-red-500' : 'bg-green-500'}`}
         />
-        <h3 className="text-xl font-semibold">{repo.name}</h3>
+        <h3 className="text-xl font-semibold text-gray-900">{repo.name}</h3>
       </div>
       
       <div className="text-sm text-gray-600">

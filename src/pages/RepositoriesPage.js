@@ -1,19 +1,22 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
-import axios from "axios";
+ import React, { useState, useEffect }from "react";
+ import { useNavigate } from "react-router-dom";
+ import axios from "axios";
+import RepositoryCard from "../components/RepositoryCard";
+import { motion, AnimatePresence  } from "framer-motion";
+import { FaCodeBranch, FaFolderOpen, FaPlus } from "react-icons/fa";
 import Sidebar from "../components/sidebar";
 import UserNavbar from "../components/UserNavbar";
-import RepositoryCard from "../components/RepositoryCard";
-import { useAuth } from "../context/AuthContext";
 
-const Dashboard = () => {
+const RepositoriesPage = () => {
   const [user, setUser] = useState(null);
   const [repos, setRepos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [repoLoading, setRepoLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const navigate = useNavigate();
+  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen); 
+
+
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -36,42 +39,35 @@ const Dashboard = () => {
     fetchUserData();
   }, [navigate]);
 
-  useEffect(() => {
-    if (!user) return;
+useEffect(() => {
+        if (!user) return; 
+          const fetchRepos = async () => {
+          try {
+            const token = localStorage.getItem("token");
+            if (!token) throw new Error("No token found");
+            const reposRes = await axios.get("http://localhost:5000/api/repos/my-repos", {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            setRepos(reposRes.data);
+          } catch (error) {
+            console.error("Failed to fetch repositories:", error.message);
+          } finally {
+            setRepoLoading(false);
+          }
+        };
+    
+        fetchRepos();
+      }, [user]);
 
-    const fetchRepos = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        if (!token) throw new Error("No token found");
-        const reposRes = await axios.get("http://localhost:5000/api/repos/my-repos", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setRepos(reposRes.data);
-      } catch (error) {
-        console.error("Failed to fetch repositories:", error.message);
-      } finally {
-        setRepoLoading(false);
-      }
-    };
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { duration: 0.5 } },
+  };
 
-    fetchRepos();
-  }, [user]);
-
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-screen bg-gray-900">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 2, repeat: Infinity }}
-          className="text-4xl text-blue-500"
-        >
-          <i className="bi bi-arrow-repeat"></i>
-        </motion.div>
-      </div>
-    );
-  }
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 },
+  };
 
   return (
     <div className="min-h-screen  w-full bg-gradient-to-b from-slate-900 to-slate-800 text-white
@@ -84,17 +80,7 @@ const Dashboard = () => {
           isSidebarOpen ? "pl-64" : "pl-0"
         }`}
       >
-        <div className="p-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-gray-800 rounded-xl p-6 shadow-xl mb-8"
-          >
-            <h1 className="text-3xl font-bold text-white mb-2">
-              Welcome, {user.username}!
-            </h1>
-            <p className="text-gray-400">{user.email}</p>
-          </motion.div>
+        <div className="p-8"> 
 
           <div className="mb-8 flex justify-between items-center">
             <h2 className="text-2xl font-bold text-white">Repositories</h2>
@@ -153,4 +139,4 @@ const Dashboard = () => {
   );
 };
 
-export default Dashboard;
+export default RepositoriesPage;

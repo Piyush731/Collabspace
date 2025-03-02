@@ -155,7 +155,7 @@ function Homepage() {
 </section> 
 
       {/* Pricing Section - Enhanced with glass effects */}
-      <section className="w-full py-20 bg-slate-900/50">
+      <section id="pricing" className="w-full py-20 bg-slate-900/50">
         <Container fluid>
           <div className="text-center mb-20 reveal-animation">
             <h2 className="text-4xl font-bold mb-4 animated-gradient-text">Simple Pricing</h2>

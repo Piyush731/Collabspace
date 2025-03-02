@@ -73,22 +73,42 @@ exports.getRepository = async (req, res) => {
         return res.status(404).json({ error: 'Repository not found' });
       } 
        const owner = await User.findById(repo.owner); 
+        const repoName = repo.name;
     // Get Gitea data
-   // Handle Gitea API errors
-   const [branches, commits] = await Promise.all([
-    axios.get(`${process.env.GITEA_URL}/api/v1/repos/${owner.username}/${repo.name}/branches`)
-      .catch(() => ({ data: [] })), // Return empty array on error
-    axios.get(`${process.env.GITEA_URL}/api/v1/repos/${owner.username}/${repo.name}/commits`)
-      .catch(() => ({ data: [] }))
+   // Fetch all Gitea data in parallel
+   const [branches, commits, repoDetails, issues, prs, readme] = await Promise.all([
+    axios.get(`${process.env.GITEA_URL}/api/v1/repos/${owner.username}/${repoName}/branches`)
+      .catch(() => ({ data: [] })),
+    axios.get(`${process.env.GITEA_URL}/api/v1/repos/${owner.username}/${repoName}/commits`)
+      .catch(() => ({ data: [] })),
+    axios.get(`${process.env.GITEA_URL}/api/v1/repos/${owner.username}/${repoName}`)
+      .catch(() => ({ data: {} })),
+    axios.get(`${process.env.GITEA_URL}/api/v1/repos/${owner.username}/${repoName}/issues?state=all`)
+      .catch(() => ({ data: [] })),
+    axios.get(`${process.env.GITEA_URL}/api/v1/repos/${owner.username}/${repoName}/pulls?state=all`)
+      .catch(() => ({ data: [] })),
+    axios.get(`${process.env.GITEA_URL}/api/v1/repos/${owner.username}/${repoName}/readme`)
+      .catch(() => ({ data: null }))
   ]);
    //combined data returned
-    res.json({
-      metadata: repo.toObject(),
-      gitData: {
-        branches: branches.data,
-        commits: commits.data
-      }
-    });
+   res.json({
+    metadata: repo.toObject(),
+    gitData: {
+      branches: branches.data,
+      commits: commits.data,
+      stats: {
+        stars: repoDetails.data.stars_count,
+        forks: repoDetails.data.forks_count,
+        issues: repoDetails.data.open_issues_count
+      },
+      issues: issues.data,
+      prs: prs.data,
+      readme: readme.data ? {
+        content: Buffer.from(readme.data.content, 'base64').toString(),
+        encoding: readme.data.encoding
+      } : null
+    }
+  });
   } catch (error) {
     console.error('Fetch repository error:', error.response?.data || error.message);
     res.status(500).json({ error: 'Failed to fetch repository data' });
@@ -114,3 +134,87 @@ exports.getUserRepositories = async (req, res) => {
       res.status(500).json({ error: 'Failed to fetch user repositories' });
     }
   };
+
+
+  // Add to existing exports
+exports.createFile = async (req, res) => {
+  try {
+    const { repoId } = req.params;
+    const { path, content, branch = 'main' } = req.body;
+    
+    const repo = await Repository.findById(repoId);
+    const owner = await User.findById(repo.owner);
+    
+    const response = await axios.put(
+      `${process.env.GITEA_URL}/api/v1/repos/${owner.username}/${repo.name}/contents/${path}`,
+      {
+        content: Buffer.from(content).toString('base64'),
+        branch,
+        message: `Create ${path}`
+      },
+      {
+        headers: {
+          Authorization: `token ${process.env.GITEA_ADMIN_TOKEN}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    res.json(response.data);
+  } catch (error) {
+    console.error('File creation error:', error);
+    res.status(500).json({ error: 'Failed to create file' });
+  }
+};
+
+exports.createDirectory = async (req, res) => {
+  try {
+    const { repoId } = req.params;
+    const { path, branch = 'main' } = req.body;
+    const repo = await Repository.findById(repoId);
+    const owner = await User.findById(repo.owner);
+
+    // Create .gitkeep file to establish directory
+    const response = await axios.put(
+      `${process.env.GITEA_URL}/api/v1/repos/${owner.username}/${repo.name}/contents/${path}/.gitkeep`,
+      {
+        content: Buffer.from('').toString('base64'),
+        branch,
+        message: `Create directory ${path}`
+      },
+      {
+        headers: {
+          Authorization: `token ${process.env.GITEA_ADMIN_TOKEN}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    res.json(response.data);
+  } catch (error) {
+    console.error('Directory creation error:', error);
+    res.status(500).json({ error: 'Failed to create directory' });
+  }
+};
+
+exports.getRepoContents = async (req, res) => {
+  try {
+    const repo = await Repository.findById(req.params.repoId);
+    const owner = await User.findById(repo.owner);
+    const path = req.query.path || '';
+    const branch = req.query.ref || repo.defaultBranch;
+
+    // Proper URL encoding and Gitea API structure
+    const encodedPath = encodeURIComponent(path);
+    const url = `${process.env.GITEA_URL}/api/v1/repos/${owner.username}/${repo.name}/contents/${encodedPath}?ref=${branch}`;
+
+    const response = await axios.get(url, {
+      headers: { Authorization: `token ${process.env.GITEA_ADMIN_TOKEN}` }
+    });
+
+    res.json(response.data);
+  } catch (error) {
+    console.error('Error fetching contents:', error);
+    res.status(500).json({ error: 'Failed to fetch repository contents' });
+  }
+};
