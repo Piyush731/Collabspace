@@ -11,7 +11,7 @@ const AddMemberForm = ({ repoId }) => {
     try {
       const token = localStorage.getItem('token');
       await axios.post(
-        `${API_URL=}/api/collaborators`,
+        `${API_URL}/api/collaborators`,
         { repoId, username, permission },
         { headers: { Authorization: `Bearer ${token}` } }
       );
