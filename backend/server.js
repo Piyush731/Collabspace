@@ -10,22 +10,36 @@ const authRoutes = require('./routes/authRoutes');
 const repoRoutes = require('./routes/repoRoutes');
 const messageRoutes = require('./routes/messageRoutes');
 const teamRoutes = require('./routes/teamRoutes'); 
+const app = express();
+app.options("*", cors());
 const allowedOrigins = [
                  process.env.FRONTEND_URL,
                 'http://localhost:3000', 
-];
-const app = express();
-app.use(cors({
-  origin: allowedOrigins,
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+]; 
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true // If you need cookies or authentication headers
+  })
+);
 app.use(bodyParser.json()); 
 app.use(express.json()); 
 app.use('/api/auth', authRoutes);
 app.use('/api/repos', repoRoutes);
 app.use('/api', messageRoutes);
 app.use('/api', teamRoutes); 
+app.get("/", (req, res) => {
+  res.send("Backend is running!");
+});
+
 const MONGO_URL = process.env.MONGO_URL; 
 mongoose.connect(MONGO_URL, {
   useNewUrlParser: true,
