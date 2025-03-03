@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import axios from 'axios'; 
+import API_URL from "../config";
 
 const AddMemberForm = ({ repoId }) => {
   const [username, setUsername] = useState('');
   const [permission, setPermission] = useState('read');
   const [error, setError] = useState('');
-  const API_URL= process.env.REACT_APP_API_URL;
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {

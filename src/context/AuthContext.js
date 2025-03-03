@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from "react";
-import axios from "axios";
+import axios from "axios"; 
+import API_URL from "../config";
 
 const AuthContext = createContext();
 
@@ -7,7 +8,6 @@ export const AuthProvider = ({ children }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState(null);
  const [loading, setLoading] = useState(true);
-const API_URL= process.env.REACT_APP_API_URL;
  useEffect(() => {
   const checkAuth = async () => {
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;

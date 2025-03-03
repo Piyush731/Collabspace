@@ -1,13 +1,13 @@
 import React,{ useEffect, useRef } from 'react';
 import Editor from '@monaco-editor/react';
-import io from 'socket.io-client';
+import io from 'socket.io-client'; 
+import API_URL from "../config";
 
 const CollaborativeEditor = ({ repoId, user }) => {
   const editorRef = useRef(null);
   const socket = useRef(null);
-  const API_URL= process.env.REACT_APP_API_URL;
   useEffect(() => {
-    socket.current = io(`${API_URL=}`);
+    socket.current = io(`${API_URL}`);
     socket.current.emit('join-repo', { repoId, userId: user._id });
 
     socket.current.on('code-update', ({ changes, userId }) => {

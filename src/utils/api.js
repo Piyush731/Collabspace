@@ -1,7 +1,8 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api',
+  baseURL: 'https://api.render.com/deploy/srv-cv28supu0jms738rfq20?key=Yo-KNKgS3HI/api' ||
+           'https://localhost:5000/api',
 });
 
 api.interceptors.request.use(config => {

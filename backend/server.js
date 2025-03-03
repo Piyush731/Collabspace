@@ -10,9 +10,12 @@ const authRoutes = require('./routes/authRoutes');
 const repoRoutes = require('./routes/repoRoutes');
 const messageRoutes = require('./routes/messageRoutes');
 const teamRoutes = require('./routes/teamRoutes'); 
+const allowedOrigins = ['http://localhost:3000',
+                process.env.FRONTEND_URL,
+];
 const app = express();
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: allowedOrigins,
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
