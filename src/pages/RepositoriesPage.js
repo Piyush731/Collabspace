@@ -5,7 +5,8 @@ import RepositoryCard from "../components/RepositoryCard";
 import { motion, AnimatePresence  } from "framer-motion";
 import { FaCodeBranch, FaFolderOpen, FaPlus } from "react-icons/fa";
 import Sidebar from "../components/sidebar";
-import UserNavbar from "../components/UserNavbar";
+import UserNavbar from "../components/UserNavbar"; 
+import API_URL from "../config";
 
 const RepositoriesPage = () => {
   const [user, setUser] = useState(null);
@@ -15,9 +16,6 @@ const RepositoriesPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const navigate = useNavigate();
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen); 
-  const API_URL= process.env.REACT_APP_API_URL;
-
-
 
   useEffect(() => {
     const fetchUserData = async () => {

@@ -19,7 +19,8 @@ import GitActions from '../components/GitActions';
 import CommitDialog from '../components/CommitDialog';
 import FileActions from '../components/FileActions';
 import { useAuth } from '../context/AuthContext';
-import ErrorBoundary from '../components/ErrorBoundary';
+import ErrorBoundary from '../components/ErrorBoundary'; 
+import API_URL from "../config";
 
 const containerVariants = {     // Animation variants
       hidden: { opacity: 0 },
@@ -53,7 +54,6 @@ const [stats, setStats] = useState({ stars: 0, forks: 0, issues: 0 });
 const [currentPath, setCurrentPath] = useState('');    //files
 const [isLoading, setIsLoading] = useState(false);
 const [isFileLoading, setIsFileLoading] = useState(false);
-const API_URL= process.env.REACT_APP_API_URL;
 // Add to RepositoryView.js under API_URL declaration
 // Add this AFTER your API_URL declaration
 const socket = io(API_URL, {
@@ -222,7 +222,7 @@ const StatsWidget = () => (
     setActiveBranch(branch);
      try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/gitea/${repoId}/branches/${branch}`, {
+      const res = await fetch(`${API_URL}/api/gitea/${repoId}/branches/${branch}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import axios from "axios"; 
+import API_URL from "../config";
 
 const CreateRepo = () => {
   const [name, setName] = useState("");
@@ -8,7 +9,6 @@ const CreateRepo = () => {
   const [visibility, setVisibility] = useState("private");
   const [error, setError] = useState("");
   const navigate = useNavigate();
- const API_URL=process.env.REACT_APP_API_URL;
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {

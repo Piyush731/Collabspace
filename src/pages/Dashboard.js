@@ -4,8 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import Sidebar from "../components/sidebar";
 import UserNavbar from "../components/UserNavbar";
-import RepositoryCard from "../components/RepositoryCard";
-import { useAuth } from "../context/AuthContext";
+import RepositoryCard from "../components/RepositoryCard"; 
+import API_URL from "../config";
 
 const Dashboard = () => {
   const [user, setUser] = useState(null);
@@ -14,7 +14,6 @@ const Dashboard = () => {
   const [repoLoading, setRepoLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const navigate = useNavigate();
- const API_URL=process.env.REACT_APP_API_URL;
   useEffect(() => {
     const fetchUserData = async () => {
       try {
