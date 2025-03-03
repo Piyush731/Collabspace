@@ -148,7 +148,7 @@ const fetchFileContent = async (file) => {
     const token = localStorage.getItem('token');
     const filepath=encodeURIComponent(file.path);
     const res = await fetch(
-      `${API_URL}/api/repos/${repoId}/contents/${filepath}}?ref=${activeBranch}`,
+      `${API_URL}/api/repos/${repoId}/contents/${filepath}?ref=${activeBranch}`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
     const data = await res.json(); 
