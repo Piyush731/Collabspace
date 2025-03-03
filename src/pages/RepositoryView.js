@@ -54,7 +54,7 @@ const socket = io(API_URL, {
   withCredentials: true,
   transports: ['websocket']
 });
-  Initialize socket connection
+  
   
     const containerVariants = {     // Animation variants
       hidden: { opacity: 0 },
