@@ -6,12 +6,13 @@ import SyntaxHighlighter from 'react-syntax-highlighter';
 import { githubGist } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
 import 'react-tabs/style/react-tabs.css';
-import FileTree from '../components/FileTree';
+
 import { io } from 'socket.io-client';
 import { motion } from 'framer-motion';
 import { Dialog } from '@headlessui/react'
 import toast,{ Toaster } from 'react-hot-toast';
 import Editor from '@monaco-editor/react';
+import FileTree from '../components/FileTree';
 import AddMemberForm from '../components/AddMemberForm';
 import BranchSelector from '../components/BranchSelector';
 import CommitHistory from '../components/CommitHistory';
@@ -48,7 +49,12 @@ const [isLoading, setIsLoading] = useState(false);
 const [isFileLoading, setIsFileLoading] = useState(false);
 const API_URL= process.env.REACT_APP_API_URL;
 // Add to RepositoryView.js under API_URL declaration
-const socket = io(API_URL); // Initialize socket connection
+// Add this AFTER your API_URL declaration
+const socket = io(API_URL, {
+  withCredentials: true,
+  transports: ['websocket']
+});
+  Initialize socket connection
   
     const containerVariants = {     // Animation variants
       hidden: { opacity: 0 },
