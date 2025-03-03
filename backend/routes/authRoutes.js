@@ -56,16 +56,21 @@ router.post("/signup", async (req, res) => {
         `${GITEA_URL}/api/v1/admin/users/${username}`,
         { headers: { Authorization: `token ${GITEA_ADMIN_TOKEN}` } }
       );
-    } catch (giteaError) {
-      if (!giteaError.response || giteaError.response.status !== 404) {
+    } catch (giteaError) { if (giteaError.response && giteaError.response.status !== 404) {
         console.error('Gitea cleanup error:', giteaError.response?.data);
+      } else {
+        console.log('No existing Gitea user to delete.');
       }
     }
     console.log("Creating Gitea user...");
        // 1. First create Gitea user
       giteaUser = await axios.post(`${GITEA_URL}/api/v1/admin/users`,
-         { username : sanitizedUsername, email, password: password, login_name: sanitizedUsername,  send_notify: false,
-          source_id: 0 }, 
+         { username : sanitizedUsername,
+           email, 
+           password: password, 
+           login_name: sanitizedUsername,  
+           send_notify: false,
+           source_id: 0 }, 
          { headers: { Authorization: `token ${GITEA_ADMIN_TOKEN}`}}
      );
      console.log("Gitea user created successfully:", giteaUser.data);
@@ -92,9 +97,14 @@ router.post("/signup", async (req, res) => {
     console.error('Signup error:', error.response?.data || error.message);
    // Cleanup Gitea user if MongoDB save failed
    if (giteaUser?.data?.id) {
-    await axios.delete(`${GITEA_URL}/api/v1/admin/users/${sanitizedUsername}`, {
-      headers: { Authorization: `token ${GITEA_ADMIN_TOKEN}` },
-    });
+    try {
+      await axios.delete(`${GITEA_URL}/api/v1/admin/users/${sanitizedUsername}`, {
+        headers: { Authorization: `token ${GITEA_ADMIN_TOKEN}` },
+      });
+      console.log("Rolled back Gitea user due to signup failure.");
+    } catch (cleanupError) {
+      console.error("Gitea rollback failed:", cleanupError.response?.data || cleanupError.message);
+    }
   }
 
   const errorMessage = error.response?.data?.message || 
@@ -103,8 +113,8 @@ router.post("/signup", async (req, res) => {
 
   res.status(500).json({
     error: error.response?.data?.message || 
-           error.response?.data?.errors?.map(e => e.message).join(', ') || 
-           'Signup failed'
+    error.response?.data?.errors?.map(e => e.message).join(', ') || 
+    'Signup failed'
   });
  }
 
