@@ -13,7 +13,7 @@ const teamRoutes = require('./routes/teamRoutes');
 const app = express();
 app.options("*", cors());
 const allowedOrigins = [
-                 process.env.FRONTEND_URL,
+  process.env.FRONTEND_URL || "https://collabspace-one.vercel.app",,
                 "http://localhost:3000", 
 ]; 
 app.use(
