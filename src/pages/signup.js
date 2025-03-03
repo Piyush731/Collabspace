@@ -20,7 +20,7 @@ const Signup = () => {
     try {
       setError("");
       if (!/^[a-zA-Z0-9-_]{3,20}$/.test(username)) {
-        throw 'Username must be 3-20 characters (letters, numbers, -_)';
+        throw new Error("Username must be 3-20 characters (letters, numbers, -_");
       }
       await signup(username, email, password);
       setIsSuccess(true);
