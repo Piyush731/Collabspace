@@ -6,7 +6,6 @@ import SyntaxHighlighter from 'react-syntax-highlighter';
 import { githubGist } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
 import 'react-tabs/style/react-tabs.css';
-
 import { io } from 'socket.io-client';
 import { motion } from 'framer-motion';
 import { Dialog } from '@headlessui/react'
@@ -23,6 +22,14 @@ import FileActions from '../components/FileActions';
 import { useAuth } from '../context/AuthContext';
 import ErrorBoundary from '../components/ErrorBoundary';
 
+const containerVariants = {     // Animation variants
+      hidden: { opacity: 0 },
+      visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
+    }; 
+    const itemVariants = {
+      hidden: { y: 20, opacity: 0 },
+      visible: { y: 0, opacity: 1 }
+    }; 
 const RepositoryView = () => {
   const [code, setCode] = useState('');
   const [repoData, setRepoData] = useState(null);
@@ -56,14 +63,7 @@ const socket = io(API_URL, {
 });
   
   
-    const containerVariants = {     // Animation variants
-      hidden: { opacity: 0 },
-      visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
-    }; 
-    const itemVariants = {
-      hidden: { y: 20, opacity: 0 },
-      visible: { y: 0, opacity: 1 }
-    }; 
+    
 
   // Fetch repository metadata and Gitea data
   useEffect(() => {
