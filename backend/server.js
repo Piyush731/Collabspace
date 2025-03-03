@@ -12,9 +12,10 @@ const messageRoutes = require('./routes/messageRoutes');
 const teamRoutes = require('./routes/teamRoutes'); 
 const app = express();
 app.options("*", cors());
+console.log("Allowed Origins:", allowedOrigins);
 const allowedOrigins = [
                  process.env.FRONTEND_URL,
-                'http://localhost:3000', 
+                "http://localhost:3000", 
 ]; 
 app.use(
   cors({
