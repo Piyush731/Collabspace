@@ -47,7 +47,8 @@ const [currentPath, setCurrentPath] = useState('');    //files
 const [isLoading, setIsLoading] = useState(false);
 const [isFileLoading, setIsFileLoading] = useState(false);
 const API_URL= process.env.REACT_APP_API_URL;
-
+// Add to RepositoryView.js under API_URL declaration
+const socket = io(API_URL); // Initialize socket connection
   
     const containerVariants = {     // Animation variants
       hidden: { opacity: 0 },
