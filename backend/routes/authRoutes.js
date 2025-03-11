@@ -27,13 +27,13 @@ router.get("/user", verifyToken, async (req, res) => {
 router.post("/signup", async (req, res) => {
     const { username, email, password } = req.body;
     let giteaUser; // Declare outside try block
-
+    let sanitizedUsername;
     try {
       if (!GITEA_URL || !GITEA_ADMIN_TOKEN) {
         return res.status(500).json({ error: "Gitea URL or token missing" });
       }
       // Check MongoDB first
-      const sanitizedUsername = username.toLowerCase().replace(/[^a-z0-9-_]/g, '');
+      sanitizedUsername = username.toLowerCase().replace(/[^a-z0-9-_]/g, '');
       if (await User.findOne({ $or: [{ email }, { username }] })) {
         return res.status(400).json({ 
           message: "Email or username already exists" 
@@ -70,13 +70,36 @@ router.post("/signup", async (req, res) => {
            password: password, 
            login_name: sanitizedUsername,  
            send_notify: false,
-           source_id: 0 }, 
+           source_id: 0,
+           must_change_password: false  }, 
          { headers: { Authorization: `token ${GITEA_ADMIN_TOKEN}`}}
      );
      console.log("Gitea user created successfully:", giteaUser.data);
+     //token creation
+     const tokenResponse = await axios.post(   //gitea token
+      `${GITEA_URL}/api/v1/users/${sanitizedUsername}/tokens`,
+      { name: "collabspace-token",
+        scopes: [
+          "read:user",          // Read user profile
+        "write:user",         // Modify user profile
+        "read:repository",    // Read repositories
+        "write:repository",   // Modify repositories (create, delete, commit)
+        "read:issue",         // Read issues & PRs
+        "write:issue",        // Modify issues & PRs
+        "read:notification",  // Read notifications
+        "write:notification", // Modify notifications
+        "read:organization",  // Read organization details
+        "write:organization", // Modify organization settings
+        "read:misc" 
+        ]
+       },
+      { auth: { username: sanitizedUsername, password: password } }
+    );
 
     // 2. Create local user with Gitea ID
-    const user = new User({  username: sanitizedUsername, email, password, giteaUserId: giteaUser.data.id });
+    const user = new User({  username: sanitizedUsername, email, password, giteaUserId: giteaUser.data.id,
+      giteaToken: tokenResponse.data.sha1
+     });
     console.log("Attempting to save user:", user);
     await user.save();
     console.log("User saved successfully:", user);

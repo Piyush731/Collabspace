@@ -11,14 +11,11 @@ const repoRoutes = require('./routes/repoRoutes');
 const messageRoutes = require('./routes/messageRoutes');
 const teamRoutes = require('./routes/teamRoutes'); 
 const app = express();
-app.options("*", cors());
-const allowedOrigins = [
-  process.env.FRONTEND_URL || "https://collabspace-one.vercel.app",,
-                "http://localhost:3000", 
-]; 
+app.options("*", cors()); 
 app.use(
   cors({
-    origin: "https://collabspace-one.vercel.app",
+    origin: ["http://localhost:3000"],
+    //origin: "https://collabspace-one.vercel.app",
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true // If you need cookies or authentication headers
@@ -55,10 +52,12 @@ const { Server } = require('socket.io');
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:3000",
+    origin: ["http://localhost:3000"],
+    //origin: "https://collabspace-one.vercel.app",
     methods: ["GET", "POST"]
   }
 }); 
+
 io.on('connection', (socket) => {
   console.log('New client connected');
   
@@ -100,6 +99,30 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log('Client disconnected');
   });
+
+  // Add to socket.io connection handler
+socket.on('code-update', async ({ repoId, path, content }) => {
+  try {
+    // Verify access first
+    const repo = await Repository.findOne({
+      _id: repoId,
+      $or: [
+        { owner: socket.user._id },
+        { 'collaborators.user': socket.user._id }
+      ]
+    });
+
+    if (repo) {
+      socket.to(repoId).emit('code-update', { path, content });
+    }
+  } catch (error) {
+    console.error('Code update error:', error);
+  }
+});
+
+socket.on('join-file', (data) => {
+  socket.join(`file-${data.repoId}-${data.path}`);
+});
 });
 
 const PORT = process.env.PORT || 5000;

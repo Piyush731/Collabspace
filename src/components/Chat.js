@@ -1,165 +1,94 @@
-import { useState, useEffect } from 'react';
-import axios from 'axios';
-import { io } from 'socket.io-client';
-import { useRef } from 'react';
-import "../styles/Chat.css";
+import React, { useEffect, useState } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { useSocket } from '../context/SocketContext';
+import { motion, AnimatePresence } from 'framer-motion';
+import API_URL from '../config';
 
-const Chat = ({ repoId, user, repoOwner }) => {
+const ChatModal = ({ repoId, showChat }) => {  // Add showChat to props
+  const { user } = useAuth();
+  const socket = useSocket();
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
-  const [showInviteModal, setShowInviteModal] = useState(false); // Modal state
-  const [email, setEmail] = useState('');
-  const socket = useRef(null); 
-  const [isMember, setIsMember] = useState(false); 
-  const isOwner = user?._id && String(user._id) === String(repoOwner);
-  
-  const [userLoaded, setUserLoaded] = useState(false);
 
   useEffect(() => {
-    // Verify user data
-    if (user?._id) {
-      console.log("User data verified:", user);
-      setUserLoaded(true);
-    }
-  }, [user]);
+    if (!socket) return;
 
-
-  useEffect(() => {
-    const checkMembership = async () => {
+    const fetchMessages = async () => {
       try {
-        const res = await axios.get(`/api/repos/${repoId}`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        });
-        const members = res.data.members.map((member) => String(member._id));
-        setIsMember(members.includes(String(user._id)) || isOwner);
+        const res = await fetch(`${API_URL}/api/messages/${repoId}`);
+        const data = await res.json();
+        setMessages(data);
       } catch (error) {
-        console.error("Failed to check membership:", error);
-      } finally {
-        setLoading(false);
+        console.error('Failed to fetch messages:', error);
       }
     };
 
-    checkMembership();
-  }, [repoId, user, isOwner]);
+    fetchMessages();
 
-  
-
-  useEffect(() => {
-    // Fetch message history
-    const fetchMessages = async () => {
-        try {
-            const res = await axios.get(`/api/messages/${repoId}`, {
-              headers: {
-                Authorization: `Bearer ${localStorage.getItem("token")}`,
-              },
-            });
-          
-            if (res.data && Array.isArray(res.data)) {
-              setMessages(res.data);
-            } else {
-              console.warn("No messages found for this repository.");
-              setMessages([]); // Ensure messages state is set to an empty array
-            }
-          } catch (error) {
-            if (error.response && error.response.status === 404) {
-              console.warn("No messages exist initially.");
-              setMessages([]); // Handle the case where no messages exist yet
-            } else {
-              console.error("Failed to fetch messages:", error.message || error);
-            }
-          } 
-    };
-
-    // Setup WebSocket
-    socket.current = io('http://localhost:5000');
-    socket.current.on('new-message', (message) => {
+    socket.on('new-message', (message) => {
       setMessages(prev => [...prev, message]);
     });
 
-    fetchMessages();
-  }, [repoId]);
-
-  const sendMessage = async () => {
-    if (!newMessage.trim()) return;
-    
-    const message = {
-      content: newMessage,
-      sender: user._id,
-      repository: repoId,
+    return () => {
+      socket.off('new-message');
     };
+  }, [repoId, socket]);
 
-    socket.current.emit('send-message', message);
+  const sendMessage = () => {
+    if (!socket || !newMessage.trim()) return;
+
+    socket.emit('send-message', {
+      repoId,
+      content: newMessage,
+      sender: user._id
+    });
     setNewMessage('');
   };
 
-  const handleInvite = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      await axios.post(
-        '/api/invite',
-        { repoId, email, role: 'member' },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      alert('Invitation sent!');
-      setShowInviteModal(false); // Close modal after sending invite
-    } catch (error) {
-      console.error('Failed to send invitation:', error);
-    }
-  };
-  if (!userLoaded) return <div>Loading user data...</div>;
-  if (!isMember) {
-    return <div>You do not have access to this repository's chat.</div>;
-  }
-
   return (
-    <div className="chat-panel">
-      <div className="message-list">
-      {messages.length > 0 ? (
-        messages.map(msg => (
-          <div key={msg._id} className="message">
-            <span className="sender">{msg.sender.username}</span>
-            <p>{msg.content}</p>
+    <AnimatePresence>
+      {showChat && (
+        <motion.div
+          initial={{ y: 100, opacity: 0, scale: 0.95 }}
+          animate={{ y: 0, opacity: 1, scale: 1 }}
+          exit={{ y: 100, opacity: 0, scale: 0.95 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+          className="fixed bottom-4 right-4 w-80 glass-effect rounded-lg shadow-xl border border-white/20 z-[999]"
+        >
+          <div className="p-4 h-96 overflow-y-auto">
+            {messages.map(msg => (
+              <motion.div
+                key={msg._id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="mb-2"
+              >
+                <strong>{msg.sender?.username}:</strong>
+                <p>{msg.content}</p>
+              </motion.div>
+            ))}
           </div>
-       ))
-      ) : (
-        <p className="no-messages">No messages yet. Start the conversation!</p>
-      )}
-
-      </div>
-      <div className="message-input">
-        <input
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
-          onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-          placeholder="Type a message..."
-        />
-        <button onClick={sendMessage}>Send</button>
-      </div>
-
-      {/* Show Add Member button only if the current user is the repository owner */}
-      {isOwner && (
-        <button onClick={() => setShowInviteModal(true)} className="invite-btn">
-          + Add Member
-        </button>
-      )}
-
-      {/* Invite Form Modal */}
-      {showInviteModal && (
-        <div className="modal">
-          <div className="modal-content">
-            <h3>Invite a Member</h3>
-            <input
-              type="email"
-              placeholder="Enter email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+          <div className="p-2 border-t">
+            <input 
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              className="w-full p-2 border rounded"
+              placeholder="Type a message..."
             />
-            <button onClick={handleInvite}>Send Invite</button>
-            <button onClick={() => setShowInviteModal(false)}>Cancel</button>
+            <motion.button 
+              onClick={sendMessage} 
+              className="mt-2 bg-blue-600 text-white px-4 py-2 rounded w-full"
+              disabled={!newMessage.trim()}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              Send
+            </motion.button>
           </div>
-        </div>
+        </motion.div>
       )}
-    </div>
+    </AnimatePresence>
   );
 };
-export default Chat;
+
+export default ChatModal;

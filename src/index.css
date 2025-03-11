@@ -13,6 +13,26 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+.grid {
+  min-height: 0;
+  min-width: 0;
+}
+/* In your CSS */
+.sidebar {
+  z-index: 1000; /* Higher than navbar's 50 */
+}
+
+.navbar {
+  z-index: 500;
+}
+
+.overflow-guard {
+  background-color: #1e1e1e !important;
+}
+/* Constrain editor container */
+/* .col-span-3 {
+  min-height: 400px;
+} */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

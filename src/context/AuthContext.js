@@ -10,7 +10,8 @@ export const AuthProvider = ({ children }) => {
  const [loading, setLoading] = useState(true);
  useEffect(() => {
   const checkAuth = async () => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    //const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const token = localStorage.getItem("token");
     
 
     if (!token) return setLoading(false);
