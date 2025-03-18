@@ -7,14 +7,17 @@ const cors = require("cors");
 const authRoutes = require("./routes/authRoutes");
 const repoRoutes = require("./routes/repoRoutes");
 const messageRoutes = require("./routes/messageRoutes");
+const uploadRoutes = require("./routes/uploadRoutes");
 const initializeSocket = require("./config/socket") 
+const multer = require('multer');
+const upload = multer({ dest: 'uploads/' });
 const app = express();
 
 app.options("*", cors());
 app.use(
   cors({
-    origin: ["http://localhost:3000"],
-    //origin: "https://collabspace-one.vercel.app",
+    //origin: ["http://localhost:3000"],
+    origin: "https://collabspace-one.vercel.app",
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true, // If you need cookies or authentication headers
@@ -27,8 +30,18 @@ app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/repos", repoRoutes);
 app.use("/api/messages", messageRoutes);
+app.use("/api/upload", uploadRoutes);
+app.use("/uploads", express.static("uploads"));
 app.get("/", (req, res) => {
   res.send("Backend is running!");
+});
+
+
+app.post('/api/upload', upload.single('image'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No file uploaded' });
+  }
+  res.json({ url: `/uploads/${req.file.filename}` });
 });
 
 
