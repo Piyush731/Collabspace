@@ -47,7 +47,7 @@ const RepositoriesPage = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen bg-gray-900">
+      <div className="flex justify-center items-center h-screen bg-gray-900 text-4xl text-blue-500">
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 2, repeat: Infinity }}
