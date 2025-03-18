@@ -1,4 +1,4 @@
-/** @type {import('tailwindcss').Config} */ 
+/** @type {import('tailwindcss').Config} */
 module.exports = {
   content: ["./src/**/*.{js,jsx,ts,tsx}"],
   theme: {
@@ -15,13 +15,20 @@ module.exports = {
         'float': {
           '0%, 100%': { transform: 'translateY(0)' },
           '50%': { transform: 'translateY(-20px)' },
-        }
-      }, 
+        },
+      },
     },
   },
-  plugins: [ require('@tailwindcss/forms'),
+  plugins: [
+    require('@tailwindcss/forms'),
     require('tailwind-scrollbar'),
-    require('@tailwindcss/typography'),],
+    require('@tailwindcss/typography'),
+  ],
+  safelist: [
+    'justify-start',
+    'justify-end',
+    'bg-blue-600',
+    'bg-gray-100',
+    // Add any other dynamic classes you need here
+  ],
 };
-
-

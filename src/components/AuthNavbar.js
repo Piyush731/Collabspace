@@ -21,11 +21,11 @@ function AuthNavbar() {
 
     return (
         <nav 
-            className={`fixed top-0 left-0 w-full z-50 backdrop-blur-lg bg-slate-900/50 border-b border-slate-700 transition-transform duration-300 ${
+            className={`h-16 fixed top-0 left-0 w-full z-50 backdrop-blur-lg bg-slate-900/50 border-b border-slate-700 transition-transform duration-300 ${
                 isVisible ? "translate-y-0" : "-translate-y-full"
             }`}
         >
-            <div className="container mx-auto px-6 py-3 flex justify-between items-center">
+            <div className="container mx-auto px-6 py-3 flex justify-between items-center h-full">
                 {/* Logo */}
                 <Link 
                     to="/" 

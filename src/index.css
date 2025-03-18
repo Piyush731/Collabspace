@@ -29,11 +29,16 @@ code {
 .overflow-guard {
   background-color: #1e1e1e !important;
 }
-/* Constrain editor container */
-/* .col-span-3 {
-  min-height: 400px;
-} */
+
+/* styles/globals.css */
+@layer utilities {
+  .justify-start {
+    justify-content: flex-start !important;
+  }
+  .justify-end {
+    justify-content: flex-end !important;
+  }
+}
 @tailwind base;
 @tailwind components;
-@tailwind utilities;
 

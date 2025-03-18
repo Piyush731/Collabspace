@@ -164,10 +164,10 @@ const ChatModal = ({ repoId, showChat }) => {
               initial={{ opacity: 0, x: isMe ? 20 : -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.3 }}
-              className={`flex ${isMe ? "justify-end" : "justify-start"}`}
+              className={`flex w-full ${isMe ? "justify-end" : "justify-start"}`}
             >
               <div
-                className={`max-w-[75%] p-3 rounded-lg shadow-md relative group ${
+                className={`max-w-[75%] min-w-[20%] p-3 rounded-lg shadow-md relative group ${
                   isMe
                     ? "bg-blue-600 text-white rounded-br-none"
                     : "bg-gray-100 text-gray-900 rounded-bl-none"
