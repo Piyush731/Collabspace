@@ -12,7 +12,6 @@ console.log("GITEA_ADMIN_TOKEN:", GITEA_ADMIN_TOKEN ? "Token Present" : "Token M
 
 //User Dashboard Route
 router.get("/user", verifyToken, async (req, res) => {
-  console.log("Decoded user from token:", req.user); // Log in middleware
   try {
     const user = await User.findById(req.user.id).select("username email userType createdAt");
     if (!user) {
@@ -62,7 +61,6 @@ router.post("/signup", async (req, res) => {
         console.log('No existing Gitea user to delete.');
       }
     }
-    console.log("Creating Gitea user...");
        // 1. First create Gitea user
       giteaUser = await axios.post(`${GITEA_URL}/api/v1/admin/users`,
          { username : sanitizedUsername,

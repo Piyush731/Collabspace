@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate  } from 'react-router-dom';
 import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
 import { motion, AnimatePresence } from 'framer-motion';
-import { io } from 'socket.io-client';
+import { useSocket } from '../context/SocketContext';
 import toast,{ Toaster } from 'react-hot-toast';
 import Editor from '@monaco-editor/react';
 import FileTree from '../components/FileTree';
@@ -97,12 +97,8 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 const [showChat, setShowChat] = useState(false);
 const [showAddCollaborator, setShowAddCollaborator] = useState(false); 
-const [collaborators, setCollaborators] = useState([]);
+const [collaborators, setCollaborators] = useState([]); 
 
-const socket = io(API_URL, {
-  withCredentials: true,
-  transports: ['websocket']
-});
 
 useEffect(() => {
   if (tabsContentRef.current) {
@@ -459,8 +455,8 @@ const handleSave = async () => {
 }; 
 
   const handleCodeChange = (value) => {
-    setCode(value);
-    socket.emit('code-update', { repoId, code: value });
+    //setCode(value);
+   // socket.emit('code-update', { repoId, code: value });
   };
 
   const handleBranchChange = async (branch) => {

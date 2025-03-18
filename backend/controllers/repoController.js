@@ -99,11 +99,9 @@ exports.getRepository = async (req, res) => {
         encodeURIComponent(repo.defaultBranch)
       }`,
       { headers: { Authorization: `token ${owner.giteaToken}` } }
-    ).then((response) => {
-      console.log('README Response:', response.data);
+    ).then((response) => { 
       return response;
-    }).catch((error) => {
-      console.error('README Fetch Error:', error.response?.data || error.message);
+    }).catch((error) => { 
       return { data: null }; // Ensure readme is always defined
     }),
     axios.get(`${process.env.GITEA_URL}/api/v1/repos/${owner.username}/${repoName}/collaborators`, {
@@ -180,26 +178,18 @@ exports.getRepoContents = async (req, res) => {
     const repoId = req.params.repoId;
     const path = req.query.path || '';
     const branch = req.query.ref || 'main';
-    console.log("Fetching repo contents for repoId:", repoId);
     if (!repoId) {
-      console.error("❌ Missing repoId in request");
       return res.status(400).json({ error: "Repository ID is required" });
     }
     const repo = await Repository.findById(repoId); 
     if (!repo) {
-      console.error("❌ Missing repo in monoodb request");
       return res.status(404).json({ error: 'Repository not found' });
     } 
-    console.log("✅ Found repository:", repo.name);
     const owner = await User.findById(repo.owner); 
     if (!owner) {  
-      console.error(`❌ Owner not found for repository: ${repo.name}`);
       return res.status(404).json({ error: 'Repository owner not found' });
     }
-    console.log("✅ Found owner:", owner.username);
-
     if (!owner.giteaToken) {
-      console.error(`❌ Missing Gitea token for owner: ${owner.username}`);
       return res.status(403).json({ error: "Gitea token is required for repository access" });
     }
     // Proper URL encoding and Gitea API structure
@@ -577,18 +567,24 @@ exports.syncCollaborators = async (req, res) => {
     const repo = await Repository.findById(req.params.repoId);
     const owner = await User.findById(repo.owner);
     
-    // Fetch collaborators from Gitea
-    const response = await axios.get(`${process.env.GITEA_URL}/api/v1/repos/${owner.username}/${repo.name}/collaborators`,
-      { headers: { Authorization: `token ${owner.giteaToken}` } } ); 
+    const response = await axios.get(
+      `${process.env.GITEA_URL}/api/v1/repos/${owner.username}/${repo.name}/collaborators`,
+      { headers: { Authorization: `token ${owner.giteaToken}` } }
+    );
+
     const collaborators = await Promise.all(response.data.map(async c => {
       const user = await User.findOne({ username: c.username });
-      return { user: user._id, permission: c.permission };
+      return { 
+        user: user ? user._id : null, // Store ObjectId
+        permission: c.permission 
+      };
     }));
 
-    repo.collaborators = collaborators;
+    repo.collaborators = collaborators.filter(c => c.user !== null);
     await repo.save();
     res.json(collaborators);
   } catch (error) {
+    console.error('Sync error:', error);
     res.status(500).json({ error: 'Sync failed' });
   }
 };
@@ -606,28 +602,23 @@ exports.addCollaborator = async (req, res) => {
       { headers: { Authorization: `token ${owner.giteaToken}` } }
     );
 
-   // Fetch updated collaborators from Gitea
-   const giteaResponse = await axios.get(
-    `${process.env.GITEA_URL}/api/v1/repos/${owner.username}/${repo.name}/collaborators`,
-    { headers: { Authorization: `token ${owner.giteaToken}` }}
-  );
+    const giteaResponse = await axios.get(
+      `${process.env.GITEA_URL}/api/v1/repos/${owner.username}/${repo.name}/collaborators`,
+      { headers: { Authorization: `token ${owner.giteaToken}` } }
+    );
 
-  // Map Gitea collaborators to MongoDB user references
-  const usernames = giteaResponse.data.map(c => c.username);
-  const users = await User.find({ username: { $in: usernames } });
-  const mappedCollaborators = giteaResponse.data.map(c => {
-    const user = users.find(u => u.username === c.username);
-    return {
-      user: user ? { _id: user._id, username: user.username } : null,
-      permission: c.permission
-    };
-  });
+    const usernames = giteaResponse.data.map(c => c.username);
+    const users = await User.find({ username: { $in: usernames } });
+    const mappedCollaborators = giteaResponse.data.map(c => {
+      const user = users.find(u => u.username === c.username);
+      return {
+        user: user ? user._id : null, // Store ObjectId instead of object
+        permission: c.permission
+      };
+    });
 
-  // Update MongoDB repository with new collaborators
-  repo.collaborators = mappedCollaborators;
-  await repo.save();
-
-
+    repo.collaborators = mappedCollaborators.filter(c => c.user !== null);
+    await repo.save();
     res.json(mappedCollaborators);
   } catch (error) {
     console.error('Error adding collaborator:', error);

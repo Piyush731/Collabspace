@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Dialog } from '@headlessui/react';
 import { motion } from 'framer-motion'; 
-import toast,{ Toaster } from 'react-hot-toast';
 import { AiOutlineFileAdd, AiOutlineFolderAdd, AiOutlineUpload, AiOutlineFile, AiOutlineDownload } from 'react-icons/ai';
 
 const FileActions = ({ path, onCreateFile, onCreateDirectory, onFolderUpload, onFileUpload, onDownloadZip }) => {
@@ -12,14 +11,19 @@ const FileActions = ({ path, onCreateFile, onCreateDirectory, onFolderUpload, on
   const [fileContent, setFileContent] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [isUploadingFile, setIsUploadingFile] = useState(false); 
+  const [isCreatingFile, setIsCreatingFile] = useState(false);
+  const [isCreatingDir, setIsCreatingDir] = useState(false);
+
 
   const handleFileSubmit = (e) => {
     e.preventDefault();
+    setIsCreatingFile(true);
     const fullPath = path ? `${path}/${fileName}` : fileName;
     onCreateFile({
       path: fullPath,
       content: fileContent
     });
+    setIsCreatingFile(false);
     setFileModalOpen(false);
     setFileName('');
     setFileContent('');
@@ -27,8 +31,10 @@ const FileActions = ({ path, onCreateFile, onCreateDirectory, onFolderUpload, on
 
   const handleDirSubmit = (e) => {
     e.preventDefault();
+    setIsCreatingDir(true);
     const fullPath = path ? `${path}/${dirName}` : dirName;
     onCreateDirectory(fullPath);
+    setIsCreatingDir(false);
     setDirModalOpen(false);
     setDirName('');
   };
@@ -177,9 +183,10 @@ const FileActions = ({ path, onCreateFile, onCreateDirectory, onFolderUpload, on
                     type="submit"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                    disabled={isCreatingFile}
                   >
-                    Create File
+                    {isCreatingFile ? <span className="animate-spin">⏳</span> : "Create File"}
                   </motion.button>
                 </div>
               </div>
@@ -221,9 +228,10 @@ const FileActions = ({ path, onCreateFile, onCreateDirectory, onFolderUpload, on
                     type="submit"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
+                    disabled={isCreatingDir}
                   >
-                    Create Directory
+                    {isCreatingDir ? <span className="animate-spin">⏳</span> : "Create Directory"}
                   </motion.button>
                 </div>
               </div>

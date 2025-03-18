@@ -1,6 +1,5 @@
 import React from "react";
 import { motion } from "framer-motion"; 
-import { Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 
 const RepositoryCard = ({ repo,isOwner }) => { 
