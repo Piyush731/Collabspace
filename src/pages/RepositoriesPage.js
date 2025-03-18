@@ -53,8 +53,9 @@ const RepositoriesPage = () => {
           transition={{ duration: 2, repeat: Infinity }}
           className="text-4xl text-blue-500"
         >
-          ⏳ Loading...
+          ⏳
         </motion.div>
+        Loading...
       </div>
     );
   }
