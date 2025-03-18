@@ -12,8 +12,10 @@ import FileActions from '../components/FileActions';
 import Sidebar from "../components/sidebar";
 import UserNavbar from "../components/UserNavbar";
 import { useAuth } from '../context/AuthContext';
+import LoadingRepository from '../components/LoadingRepository';
 import API_URL from "../config"; 
 import ChatModal from '../components/Chat';
+import AddCollaboratorModal from '../components/AddCollaboratorModal';
 // Animation configurations
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -51,23 +53,19 @@ const listItemVariants = {
   })
 };
 const decodeBase64 = (base64) => {
-  // Add padding if needed
-  let padded = base64.replace(/-/g, '+').replace(/_/g, '/');
-  const padLength = (4 - (padded.length % 4)) % 4;
-  padded += '='.repeat(padLength);
-
   try {
-    const binaryString = atob(padded);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-    return new TextDecoder().decode(bytes);
-  } catch (error) {
-    console.error('Base64 decoding error:', error);
-    return 'Failed to decode file content';
-  }
-};
+    const converted = base64
+    .replace(/-/g, '+')
+    .replace(/_/g, '/')
+    .padEnd(base64.length + (4 - (base64.length % 4)) % 4, '=');
+     // Decode using browser's built-in function
+     const decodedString = decodeURIComponent(escape(atob(converted)));
+     return decodedString;
+   } catch (error) {
+     console.error('Base64 decoding error:', error);
+     return `Failed to decode file content: ${error.message}`;
+   }
+ };
 const RepositoryView = () => {
   const { repoId } = useParams();
   const { user } = useAuth();
@@ -99,6 +97,7 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 const [showChat, setShowChat] = useState(false);
 const [showAddCollaborator, setShowAddCollaborator] = useState(false); 
+const [collaborators, setCollaborators] = useState([]);
 
 const socket = io(API_URL, {
   withCredentials: true,
@@ -138,6 +137,7 @@ useEffect(() => {
         setCommits(repoJson.gitData.commits);
         setIssues(repoJson.gitData.issues);
         setPrs(repoJson.gitData.prs);
+        setCollaborators(repoJson.gitData.collaborators || []);
         setStats(repoJson.gitData.stats);
         if (!repoJson.gitData.readme?.content) {
           const readmeRes = await fetch(
@@ -176,30 +176,22 @@ const fetchDirectoryContents = async (branch, path = '') => {
       { headers: { Authorization: `Bearer ${token}` } }
     );
     if (!res.ok) throw new Error('Invalid response'); 
-    const data = await res.json();
-    //setCurrentDir(data.map(item => ({
-     // ...item,
-     // path: `${path ? `${path}/` : ''}${item.name}`
-    //})));
+    const data = await res.json(); 
     setCurrentDir(data);
     setCurrentPath(path);
   } catch (error) {
     console.error('Error fetching directory:', error);
+    toast.error(`Error loading directory: ${error.message}`);
   } finally {
     setIsLoading(false);
   }
  };
 
  // Add file/directory creation handler
-const handleCreateFile = async ({ path, isDirectory, content }) => {
+const handleCreateFile = async ({ path, content }) => {
   try {
-    const token = localStorage.getItem('token');  
-    console.log("Creating:", isDirectory ? "Directory" : "File", "at", path);
-    const endpoint = isDirectory 
-    ? `${API_URL}/api/repos/${repoId}/create-directory`
-    : `${API_URL}/api/repos/${repoId}/create-file`;
-
-    const response = await fetch(endpoint, {
+    const token = localStorage.getItem('token'); 
+    const response = await fetch(`${API_URL}/api/repos/${repoId}/create-file`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -207,23 +199,163 @@ const handleCreateFile = async ({ path, isDirectory, content }) => {
       },
       body: JSON.stringify({
         path,
-        content: isDirectory ? ' ' : content,
+        content,
         branch: activeBranch
       })
     });
+
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.error || 'Request failed');
     }
     if (response.ok) {
-      toast.success(`${isDirectory ? 'Directory' : 'File'} created successfully`);
+      toast.success(`created successfully`);
       fetchDirectoryContents(activeBranch, currentPath);
     }
   } catch (error) {
-    toast.error(`Failed to create ${isDirectory ? 'directory' : 'file'}`);
+    toast.error(`Failed to create  file`);
   }
 };
 
+const handleCreateDirectory = async (path) => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_URL}/api/repos/${repoId}/create-directory`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        path,
+        branch: activeBranch
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Directory creation failed');
+    }
+
+    toast.success('Directory created successfully');
+    fetchDirectoryContents(activeBranch, currentPath);
+  } catch (error) {
+    console.error('Directory creation error:', error);
+    toast.error(`Failed to create directory: ${error.message}`);
+  }
+};
+
+
+const handleFolderUpload = async (e) => {
+  const files = Array.from(e.target.files);
+  if (files.length === 0) return;
+
+  const readFileAsBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target.result.split(',')[1]);
+      reader.onerror = (error) => reject(error);
+      reader.readAsDataURL(file);
+    });
+  };
+
+  try {
+    // First create all directories
+    const directories = new Set();
+    files.forEach(file => {
+      const relativePath = file.webkitRelativePath.split('/').slice(0, -1).join('/');
+      if (relativePath) directories.add(relativePath);
+    });
+
+    // Create directories first
+    for (const dirPath of Array.from(directories)) {
+      await handleCreateDirectory(`${currentPath}/${dirPath}`);
+    }
+
+    // Then upload files
+    for (const file of files) {
+      const content = await readFileAsBase64(file);
+      let filePath = file.webkitRelativePath || file.name;
+      filePath = currentPath ? `${currentPath}/${filePath}` : filePath;
+
+      await handleCreateFile({
+        path: filePath,
+        content
+      });
+      
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+
+    toast.success(`Uploaded ${files.length} files successfully`);
+    fetchDirectoryContents(activeBranch, currentPath);
+  } catch (error) {
+    console.error('Upload error:', error);
+    toast.error(`Upload failed: ${error.message}`);
+  }
+};
+
+const handleFileUpload = async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return; 
+    const readFileAsBase64 = (file) => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result.split(',')[1]);
+        reader.onerror = (error) => reject(error);
+        reader.readAsDataURL(file);
+      });
+    };
+
+    try {
+      for (const file of files) {
+        const content = await readFileAsBase64(file);
+         const fullPath = currentPath ? `${currentPath}/${file.name}` : file.name;
+         await handleCreateFile({
+          path: fullPath,
+          content: content
+        });
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+      toast.success(`Uploaded ${files.length} file(s) successfully`);
+      fetchDirectoryContents(activeBranch, currentPath);
+    } catch (error) {
+      console.error('File upload error:', error);
+      toast.error(`Upload failed: ${error.message}`);
+    }
+  };
+
+
+  const handleDownloadZip = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(
+        `${API_URL}/api/repos/${repoId}/download-zip?branch=${activeBranch}`,
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+  
+      if (!response.ok) {
+        throw new Error('Failed to download repository');
+      }
+  
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${repoData.name}-${activeBranch}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+  
+    } catch (error) {
+      console.error('Download error:', error);
+      toast.error(`Download failed: ${error.message}`);
+    }
+  };
+
+  
  // file content fetching
 const fetchFileContent = async (file) => {
   try {
@@ -239,10 +371,22 @@ const fetchFileContent = async (file) => {
      setFileContent('');
      setCode('');
 
-    if (file.type === 'file' && file.size > 1024 * 1024) { // 1MB limit
+     if (file.type === 'file' && file.size > 1024 * 1024) {
       setFileContent('File too large to display');
-      setCode('');
+      return;
+    } 
+    // Handle binary files differently
+    if (file.name.match(/\.(png|jpg|jpeg|gif|pdf|zip)$/i)) {
+      const res = await fetch(
+        `${API_URL}/api/repos/${repoId}/files/${encodeURIComponent(file.path)}?ref=${activeBranch}&raw=true`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const blob = await res.blob();
+      const text = await blob.text();
+      setFileContent('Binary file - download to view');
+      setCode(text);
     }else{
+      
       const decodedContent = decodeBase64(data.content);
       console.log('Decoded content:', decodedContent); // Add debug log
       setFileContent(decodedContent);
@@ -260,7 +404,7 @@ const fetchFileContent = async (file) => {
   }
  };
 
- const handleSave = async () => {
+const handleSave = async () => {
   if (!selectedFile) {
     toast.error('No file selected');
     return;
@@ -277,24 +421,38 @@ const fetchFileContent = async (file) => {
   }
   try {
     const token = localStorage.getItem('token');
-    const response = await fetch(`${API_URL}/api/repos/${repoId}/create-file`, {
-      method: 'POST',
+    const isNewFile = !selectedFile.sha;
+    const endpoint = isNewFile ? 
+    `${API_URL}/api/repos/${repoId}/create-file` : 
+    `${API_URL}/api/repos/${repoId}/update-file`;
+
+    const base64Content = btoa(unescape(encodeURIComponent(code)));
+
+    const body = {
+      path: selectedFile.path,
+      content: base64Content,
+      branch: activeBranch,
+      message: commitMessage || (isNewFile ? 'Create file' : 'Update file')
+    };
+
+    if (!isNewFile) {
+      body.sha = selectedFile.sha;
+    }
+
+    const response = await fetch(endpoint, {
+      method: isNewFile ? 'POST' : 'PUT',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`
       },
-      body: JSON.stringify({
-        path: selectedFile.path,
-        content: code,
-        branch: activeBranch,
-        message: commitMessage || 'Update file',  // Add commit message
-        sha: selectedFile.sha  // Add SHA from file metadata
-      })
+      body: JSON.stringify(body)
     });
-    if (!response.ok) throw new Error('Failed to save file');
-    toast.success('File saved successfully');
-    await fetchFileContent(selectedFile); // Refresh content
-    fetchDirectoryContents(activeBranch, currentPath); // Refresh file tree
+
+    if (!response.ok) throw new Error('Failed to save file'); 
+    toast.success(`File ${isNewFile ? 'created' : 'updated'} successfully`);
+    await fetchFileContent(selectedFile);
+    fetchDirectoryContents(activeBranch, currentPath);
+
   } catch (error) {
     toast.error(error.message);
   }
@@ -384,7 +542,8 @@ const handleRepositoryAction = (action) => {
     }; 
 
 
-  if (!repoData) return <div className="p-4 text-gray-600">Loading repository...</div>; 
+    if (!repoData) return <LoadingRepository />;
+
 
   return (
     <div className="flex flex-col h-screen bg-gray-50 mt-4">
@@ -489,13 +648,32 @@ const handleRepositoryAction = (action) => {
                   <div className="p-4 border-b border-gray-100">
                     <FileActions 
                       path={currentPath} 
-                      onCreate={handleCreateFile} 
-                    />
+                      onCreateFile={handleCreateFile} // Changed from onCreate
+                      onCreateDirectory={handleCreateDirectory}
+                      onFolderUpload={handleFolderUpload}
+                      onFileUpload={handleFileUpload}
+                      onDownloadZip={handleDownloadZip}
+                     // onRename={handleRename}
+                     // onDelete={handleDelete}
+                     // onCopy={handleCopy}
+                     // onMove={handleMove}
+                     // onPaste={handlePaste}
+                     /// onRefresh={handleRefresh}
+                     // onSearch={handleSearch}
+                     // onOpenInBrowser={handleOpenInBrowser}
+                     // onOpenInEditor={handleOpenInEditor}
+                     // onOpenInTerminal={handleOpenInTerminal}
+                     // onOpenInBrowser={handleOpenInBrowser}
+                     // onOpenInEditor={handleOpenInEditor}
+                     // onOpenInTerminal={handleOpenInTerminal}
+                    /> 
                   </div>
                   <div className="flex-1 overflow-y-auto p-2">
                     <FileTree
-                      contents={currentDir}
-                      onFileSelect={async (item) => {
+                       repoId={repoId}
+                       activeBranch={activeBranch}
+                       contents={currentDir}
+                       onFileSelect={async (item) => {
                         setSelectedFile(item);
                         if (!tabs.includes('Editor')) {
                           setTabs(['Code', 'Editor', 'Issues', 'PRs', 'Commits', 'README','Collaborators']);
@@ -751,36 +929,126 @@ const handleRepositoryAction = (action) => {
   </div>
 </TabPanel>
 <TabPanel className="h-full flex flex-col mt-2">
+
+{showAddCollaborator && (
+  <AddCollaboratorModal
+    repoId={repoId}
+    onClose={() => setShowAddCollaborator(false)}
+    onAddCollaborator={async () => {
+      const token = localStorage.getItem('token');
+      const repoRes = await fetch(`${API_URL}/api/repos/${repoId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const repoJson = await repoRes.json();
+      setCollaborators(repoJson.gitData.collaborators);
+    }}
+  />
+)}
+
   <div className="bg-gray-50 flex flex-col flex-1 overflow-y-auto min-h-0">
     <div className="flex justify-between items-center p-4">
       <h2 className="text-2xl font-bold">Collaborators</h2>
-      <button 
+      <motion.button
         onClick={() => setShowAddCollaborator(true)}
-        className="bg-green-600 text-white px-4 py-2 rounded"
+        className="bg-green-600 text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-green-700 transition-colors"
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
       >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="h-5 w-5"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+        >
+          <path
+            fillRule="evenodd"
+            d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z"
+            clipRule="evenodd"
+          />
+        </svg>
         Add Collaborator
-      </button>
+      </motion.button>
     </div>
-    <div className="p-4 space-y-3">
-      {repoData.collaborators.map(collab => (
-        <div key={collab.user._id} className="bg-white p-4 rounded-lg shadow-sm">
-          <div className="flex items-center justify-between">
+
+    {/* Owner Section */}
+    <motion.div
+      className="p-4 space-y-3"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.2 }}
+    >
+      <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-6 w-6 text-yellow-600"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fillRule="evenodd"
+                d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                clipRule="evenodd"
+              />
+            </svg>
             <div>
-              <h3 className="font-semibold">{collab.user.username}</h3>
-              <p className="text-sm text-gray-600">{collab.permission}</p>
+              <h3 className="font-semibold">{repoData.owner.username}</h3>
+              <p className="text-sm text-gray-600">Owner</p>
             </div>
-            {collab.user._id === repoData.owner._id && (
-              <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded">Owner</span>
+          </div>
+          <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-sm">
+            Admin
+          </span>
+        </div>
+      </div>
+    </motion.div>
+
+    {/* Collaborators List */}
+    <motion.div
+      className="p-4 space-y-3"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.4 }}
+    >
+      {collaborators.map((collab, index) => (
+        <motion.div
+          key={collab.user?._id}
+          className="bg-white p-4 rounded-lg shadow-sm border border-gray-200"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.2 + index * 0.1 }}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-6 w-6 text-blue-600"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              <div>
+                <h3 className="font-semibold">{collab.user?.username}</h3>
+                <p className="text-sm text-gray-600">{collab.permission}</p>
+              </div>
+            </div>
+            {repoData.owner._id === collab.user?._id && (
+              <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-sm">
+                Owner
+              </span>
             )}
           </div>
-        </div>
+        </motion.div>
       ))}
-    </div>
-  </div>
+    </motion.div>
+  </div> 
 </TabPanel>
-
-
-
           </div>
         </Tabs>
       </div>
@@ -799,6 +1067,7 @@ const handleRepositoryAction = (action) => {
     💬
   </motion.div>
 </motion.button> 
+
 
       <Toaster 
         position="bottom-right"

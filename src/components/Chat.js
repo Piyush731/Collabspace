@@ -15,13 +15,13 @@ const ChatModal = ({ repoId, showChat }) => {  // Add showChat to props
 
     const fetchMessages = async () => {
       try {
-        const res = await fetch(`${API_URL}/api/messages/${repoId}`);
-        const data = await res.json();
-        setMessages(data);
+       // const res = await fetch(`${API_URL}/api/messages/${repoId}`);
+       // const data = await res.json();
+       // setMessages(data);
       } catch (error) {
-        console.error('Failed to fetch messages:', error);
+       // console.error('Failed to fetch messages:', error);
       }
-    };
+    }; 
 
     fetchMessages();
 

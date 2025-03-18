@@ -1,21 +1,26 @@
- import React, { useState, useEffect }from "react";
+ import React, { useState, useEffect, Suspense, lazy} from "react";
  import { useNavigate } from "react-router-dom";
- import axios from "axios";
-import RepositoryCard from "../components/RepositoryCard";
+ import axios from "axios"; 
 import { motion, AnimatePresence  } from "framer-motion";
 import { FaCodeBranch, FaFolderOpen, FaPlus } from "react-icons/fa";
 import Sidebar from "../components/sidebar";
 import UserNavbar from "../components/UserNavbar"; 
 import API_URL from "../config";
 
-const RepositoriesPage = () => {
+const RepositoriesPage = () => { 
   const [user, setUser] = useState(null);
   const [repos, setRepos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [repoLoading, setRepoLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const RepositoryCard = lazy(() => import("../components/RepositoryCard"));
+
   const navigate = useNavigate();
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen); 
+    // Separate repos into owned and collaborated
+    const ownedRepos = repos.filter(repo => repo.owner?._id === user?._id);
+    const collaboratedRepos = repos.filter(repo => repo.owner?._id !== user?._id);
+    
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -74,11 +79,7 @@ useEffect(() => {
       <UserNavbar toggleSidebar={toggleSidebar} isSidebarOpen={isSidebarOpen} />
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
 
-      <main
-        className={`pt-16 transition-all duration-300 ${
-          isSidebarOpen ? "pl-64" : "pl-0"
-        }`}
-      >
+      <main className={`pt-16 transition-all duration-300 ${ isSidebarOpen ? "lg:pl-64" : "pl-0"}`}  >
         <div className="p-8"> 
 
           <div className="mb-8 flex justify-between items-center">
@@ -87,9 +88,9 @@ useEffect(() => {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => navigate("/create-repo")}
-              className="bg-blue-600 text-white px-6 py-3 rounded-lg flex items-center space-x-2"
+              className="bg-blue-600 text-white px-6 py-3 rounded-lg flex items-center space-x-2 hover:bg-blue-700 transition-colors"
             >
-              <i className="bi bi-plus-lg"></i>
+              <FaPlus className="text-lg" />
               <span>New Repository</span>
             </motion.button>
           </div>
@@ -114,24 +115,66 @@ useEffect(() => {
                 No repositories found
               </motion.div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {repos.map((repo, index) => (
-                  <motion.div
-                    key={repo._id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    whileHover={{ scale: 1.02 }}
-                  >
-                    <RepositoryCard
-                      repo={repo}
-                      onClick={() => navigate(`/repo/${repo._id}`)}
-                    />
-                  </motion.div>
-                ))}
-              </div>
-            )}
-          </AnimatePresence>
+              <div className="space-y-12">
+              {/* Owned Repositories Section */}
+              <motion.section
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-6"
+              >
+                <div className="flex items-center space-x-4 border-b border-slate-700 pb-4">
+                  <FaFolderOpen className="text-2xl text-blue-400" />
+                  <h3 className="text-xl font-semibold">Your Repositories ({ownedRepos.length})</h3>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <Suspense fallback={<div>Loading...</div>}>
+                  {ownedRepos.map((repo, index) => (
+                    <motion.div
+                      key={repo._id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                      whileHover={{ scale: 1.02 }}
+                    >
+                      <RepositoryCard repo={repo} isOwner />
+
+                    </motion.div>
+                  ))}
+                 </Suspense> 
+                </div>
+              </motion.section>
+
+              {/* Collaborated Repositories Section */}
+              {collaboratedRepos.length > 0 && (
+                <motion.section
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="space-y-6"
+                >
+                  <div className="flex items-center space-x-4 border-b border-slate-700 pb-4">
+                    <FaCodeBranch className="text-2xl text-purple-400" />
+                    <h3 className="text-xl font-semibold">Collaborating ({collaboratedRepos.length})</h3>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {collaboratedRepos.map((repo, index) => (
+                      <motion.div
+                        key={repo._id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                        whileHover={{ scale: 1.02 }}
+                      >
+                        <RepositoryCard repo={repo} />
+                      </motion.div>
+                    ))}
+                  </div>
+                </motion.section>
+              )}
+            </div>
+          )}
+        </AnimatePresence>
         </div>
       </main>
     </div>
