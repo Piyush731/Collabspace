@@ -16,8 +16,8 @@ const app = express();
 app.options("*", cors());
 app.use(
   cors({
-    //origin: ["http://localhost:3000"],
-    origin: "https://collabspace-one.vercel.app",
+    origin: ["http://localhost:3000"],
+    //origin: "https://collabspace-one.vercel.app",
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true, // If you need cookies or authentication headers
@@ -47,8 +47,7 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
 
 const MONGO_URL = process.env.MONGO_URL;
 mongoose
-  .connect(MONGO_URL, {
-    useNewUrlParser: true,
+  .connect(MONGO_URL, {useNewUrlParser: true,
     useUnifiedTopology: true,
   })
   .then(() => console.log("✅ MongoDB Atlas connected successfully"))

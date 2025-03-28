@@ -160,7 +160,7 @@ exports.getUserRepositories = async (req, res) => {
         ]
       })
       .populate('owner', 'username email')
-      .populate('collaborators.user', 'username email');
+      .populate('collaborators.user', '_id username email');
   
       res.json(repositories);
   
@@ -593,35 +593,61 @@ exports.addCollaborator = async (req, res) => {
   try {
     const { username, permission } = req.body;
     const repoId = req.params.repoId;
-    const repo = await Repository.findById(repoId);
-    const owner = await User.findById(repo.owner);
+    
+    // Validate inputs
+    if (!username || !permission) {
+      return res.status(400).json({ error: "Username and permission are required" });
+    }
 
+    const repo = await Repository.findById(repoId);
+    if (!repo) return res.status(404).json({ error: "Repository not found" });
+
+    const owner = await User.findById(repo.owner);
+    if (!owner) return res.status(404).json({ error: "Owner not found" });
+
+    // Verify user exists in Gitea
+    try {
+      await axios.get(`${process.env.GITEA_URL}/api/v1/users/${username}`, {
+        headers: { Authorization: `token ${owner.giteaToken}` }
+      });
+    } catch (error) {
+      if (error.response?.status === 404) {
+        return res.status(404).json({ error: "User does not exist in Gitea" });
+      }
+      throw error;
+    }
+
+    // Add collaborator to Gitea
     await axios.put(
       `${process.env.GITEA_URL}/api/v1/repos/${owner.username}/${repo.name}/collaborators/${username}`,
       { permission },
       { headers: { Authorization: `token ${owner.giteaToken}` } }
     );
-
+    
+    // Fetch updated collaborator list from Gitea
     const giteaResponse = await axios.get(
       `${process.env.GITEA_URL}/api/v1/repos/${owner.username}/${repo.name}/collaborators`,
       { headers: { Authorization: `token ${owner.giteaToken}` } }
     );
-
+    
+    // Map Gitea collaborators to our user IDs
     const usernames = giteaResponse.data.map(c => c.username);
     const users = await User.find({ username: { $in: usernames } });
-    const mappedCollaborators = giteaResponse.data.map(c => {
-      const user = users.find(u => u.username === c.username);
-      return {
-        user: user ? user._id : null, // Store ObjectId instead of object
-        permission: c.permission
-      };
-    });
-
-    repo.collaborators = mappedCollaborators.filter(c => c.user !== null);
-    await repo.save();
+    
+    const mappedCollaborators = collaborators.data.map(c => ({
+      user: users.find(u => u.username === c.username)?._id,
+      permission,
+    })).filter(c => c.user);  // Filter out collaborators without local users
+    
+    // Update repository with synced collaborators
+    repo.collaborators = mappedCollaborators;
+    await repo.save(); 
     res.json(mappedCollaborators);
+
   } catch (error) {
-    console.error('Error adding collaborator:', error);
-    res.status(500).json({ error: 'Failed to add collaborator' });
+    console.error('Add collaborator error:', error.response?.data || error);
+    const status = error.response?.status || 500;
+    const message = error.response?.data?.message || 'Failed to add collaborator';
+    res.status(status).json({ error: message });
   }
 };

@@ -72,7 +72,7 @@ module.exports = function initializeSocket(server) {
             { owner: socket.user._id },
             { "collaborators.user": socket.user._id },
           ],
-        });
+        }).populate('collaborators.user', '_id username permission');
 
         if (!repo) {
           console.warn(`⚠ Access Denied: User ${socket.user.username} is not a collaborator of repo ${repoId}`);

@@ -20,9 +20,12 @@ const AddCollaboratorModal = ({ repoId, onClose, onAddCollaborator }) => {
         },
         body: JSON.stringify(newCollaborator),
       });
-
-      if (!response.ok) throw new Error(await response.text());
-
+  
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || data.message || 'Failed to add collaborator');
+      }
+  
       onAddCollaborator();
       onClose();
       toast.success('Collaborator added successfully');

@@ -400,29 +400,68 @@ const fetchFileContent = async (file) => {
   }
  };
 
-const handleSave = async () => {
+ const handleSave = async () => {
   if (!selectedFile) {
     toast.error('No file selected');
     return;
   }
-  if (user._id !== repoData.owner._id && activeBranch === 'main') {
-    const hasWriteAccess = repoData.collaborators.find(c => 
-      c.user._id === user._id && ['admin', 'write'].includes(c.permission)
-    );
-    
-    if (!hasWriteAccess) {
-      toast.error('You need write permissions to modify main branch');
-      return;
-    }
-  }
+
   try {
+    // Debug: Log critical IDs and types
+    console.groupCollapsed('Permission Debug Info');
+    console.log('Current User:', {
+      id: user?._id,
+      type: typeof user?._id,
+      stringified: user?._id?.toString()
+    });
+    
+    console.log('Repo Owner:', {
+      id: repoData?.owner?._id,
+      type: typeof repoData?.owner?._id,
+      stringified: repoData?.owner?._id?.toString()
+    });
+
+    console.log('Collaborators:', repoData?.collaborators?.map(c => ({
+      userId: c?.user?._id?.toString(),
+      permission: c?.permission,
+      type: typeof c?.user?._id,
+      match: c?.user?._id?.toString() === user?._id?.toString()
+    })));
+
+    // Permission check logic
+    if (activeBranch === 'main' || activeBranch === repoData?.defaultBranch) {
+      const isOwner = user?._id?.toString() === repoData?.owner?._id?.toString();
+      console.log('Is Owner:', isOwner);
+
+      const collaborator = repoData?.collaborators?.find(c => 
+        c?.user?._id?.toString() === user?._id?.toString()
+      );
+      console.log('Found Collaborator:', collaborator);
+
+      const permission = collaborator?.permission?.toLowerCase();
+      console.log('Normalized Permission:', permission);
+
+      const hasPermission = ['admin', 'write'].includes(permission);
+      console.log('Has Permission:', hasPermission);
+
+      if (!isOwner && !hasPermission) {
+        console.error('Permission Check Failed');
+        toast.error('You need write permissions to modify main branch');
+        return;
+      }
+    }
+    console.groupEnd();
+
+    // Rest of the save logic
     const token = localStorage.getItem('token');
     const isNewFile = !selectedFile.sha;
     const endpoint = isNewFile ? 
-    `${API_URL}/api/repos/${repoId}/create-file` : 
-    `${API_URL}/api/repos/${repoId}/update-file`;
+      `${API_URL}/api/repos/${repoId}/create-file` : 
+      `${API_URL}/api/repos/${repoId}/update-file`;
 
-    const base64Content = btoa(unescape(encodeURIComponent(code)));
+    const base64Content = btoa(new TextEncoder().encode(code).reduce(
+      (data, byte) => data + String.fromCharCode(byte), ''
+    ));
 
     const body = {
       path: selectedFile.path,
@@ -435,6 +474,13 @@ const handleSave = async () => {
       body.sha = selectedFile.sha;
     }
 
+    console.log('Saving with payload:', {
+      path: selectedFile.path,
+      branch: activeBranch,
+      isNewFile,
+      sha: body.sha
+    });
+
     const response = await fetch(endpoint, {
       method: isNewFile ? 'POST' : 'PUT',
       headers: {
@@ -444,18 +490,27 @@ const handleSave = async () => {
       body: JSON.stringify(body)
     });
 
-    if (!response.ok) throw new Error('Failed to save file'); 
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Save Failed:', errorData);
+      throw new Error(errorData.message || 'Failed to save file');
+    }
+
+    const result = await response.json();
+    console.log('Save Successful:', result);
+    
     toast.success(`File ${isNewFile ? 'created' : 'updated'} successfully`);
     await fetchFileContent(selectedFile);
     fetchDirectoryContents(activeBranch, currentPath);
 
   } catch (error) {
+    console.error('Save Error:', error);
     toast.error(error.message);
   }
-}; 
+};
 
   const handleCodeChange = (value) => {
-    //setCode(value);
+     setCode(value);
    // socket.emit('code-update', { repoId, code: value });
   };
 

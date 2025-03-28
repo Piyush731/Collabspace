@@ -16,3 +16,46 @@ GITEA_ADMIN_TOKEN=843ed12448867fb52f573843ce32d40761e89f76
 
 
 Change cors everytime, .env(backend) and config.js(frontend) 
+
+
+
+
+
+
+
+
+
+exports.addCollaborator = async (req, res) => {
+  try {
+    const { username, permission } = req.body;
+    const repoId = req.params.repoId;
+    const repo = await Repository.findById(repoId);
+    const owner = await User.findById(repo.owner);
+
+    await axios.put(
+      `${process.env.GITEA_URL}/api/v1/repos/${owner.username}/${repo.name}/collaborators/${username}`,
+      { permission },
+      { headers: { Authorization: `token ${owner.giteaToken}` } }
+    );
+
+    const giteaResponse = await axios.get(
+      `${process.env.GITEA_URL}/api/v1/repos/${owner.username}/${repo.name}/collaborators`,
+      { headers: { Authorization: `token ${owner.giteaToken}` } }
+    );
+
+    const usernames = giteaResponse.data.map(c => c.username);
+    const users = await User.find({ username: { $in: usernames } });
+    
+    const mappedCollaborators = collaborators.data.map(c => ({
+      user: users.find(u => u.username === c.username)?._id?.toString(),
+      permission: c.permission, // Ensure lowercase
+    })).filter(c => c.user); 
+
+    repo.collaborators = mappedCollaborators;
+    await repo.save();
+    res.json(mappedCollaborators);
+  } catch (error) {
+    console.error('Error adding collaborator:', error);
+    res.status(500).json({ error: 'Failed to add collaborator' });
+  }
+};
