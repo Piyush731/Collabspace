@@ -26,4 +26,5 @@ repositorySchema.pre('save', function(next) {
   next();
 });
 repositorySchema.index({ name: 1, owner: 1 }, { unique: true });
+
 module.exports = mongoose.model('Repository', repositorySchema);

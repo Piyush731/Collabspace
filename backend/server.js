@@ -33,13 +33,10 @@ app.use("/api/repos", repoRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/jira", jiraRoutes);
-app.use("/api/notifications", notificationRoutes);
 app.use("/uploads", express.static("uploads"));
 app.get("/", (req, res) => {
   res.send("Backend is running!");
-});
-
-app.use(require('./middleware/errorHandler'));
+}); 
 
 
 app.post('/api/upload', upload.single('image'), (req, res) => {

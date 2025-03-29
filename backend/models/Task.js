@@ -1,4 +1,6 @@
 // models/Task.js
+const mongoose = require('mongoose');
+
 const taskSchema = new mongoose.Schema({
   title: { type: String, required: true, trim: true },
   description: {
@@ -51,6 +53,8 @@ const taskSchema = new mongoose.Schema({
   activityLog: [{
     type: { type: String, enum: ['create', 'update', 'comment', 'status-change']     },
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, 
-    details: String, timestamp: { type: Date, default: Date.now } }] },
+    details: String, timestamp: { type: Date, default: Date.now } 
+  }] }, 
+  { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } });
 
-   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } });
+  module.exports = mongoose.model('Task', taskSchema);

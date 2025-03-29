@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const axios = require('axios');
-const authJWT = require('../middleware/authJWT');
+const authJWT = require('../middleware/auth');
 
 // Link file to JIRA issue
 router.post('/create-issue', authJWT, async (req, res) => {
@@ -41,3 +41,4 @@ router.post('/create-issue', authJWT, async (req, res) => {
     res.status(500).json({ error: 'JIRA integration failed' });
   }
 });
+module.exports = router;
