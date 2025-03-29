@@ -25,6 +25,7 @@ import RepositoryView from './pages/RepositoryView';
 import ErrorBoundary from './components/ErrorBoundary';
 import FileViewer from './components/FileViewer';
 import { SocketProvider, useSocket } from './context/SocketContext';
+import { TaskProvider } from './context/TaskContext';
 
 function App() {
   const location = useLocation(); // Safe to use here as it's inside Router
@@ -39,36 +40,38 @@ function App() {
   return (
       <div className="app">
         <SocketProvider>
-         {/* Conditionally render Navbar nd sidebar based on login state */}
-         {isLoggedIn && <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />} 
-         {isLoggedIn ? (
-        <UserNavbar /> // Show after login
-      ) : authPages.includes(location.pathname) ? (
-        <AuthNavbar /> // Show on login and signup pages
-      ) : (
-        <Navbar /> // Default navbar
-      )}
-      <ErrorBoundary>
-        <div className="content ">
-          <Routes>
-            <Route path="/" element={<Homepage />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/profile" element={<UserProfilePage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/reports" element={<ReportsPage />} />
-            <Route path="/tasks" element={<TasksPage />} />
-            <Route path="/repositories" element={<RepositoriesPage />} />
-            <Route path="/contact" element={<ContactUs />} /> 
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />  
-            <Route path="/create-repo" element={<CreateRepo />} />
-            <Route path="*" element={<div>Page Not Found</div>} />
-            <Route path="/repo/:repoId" element={<RepositoryView />} />
-            <Route path="/repos/:repoId/files/:filePath" element={<FileViewer />} />
-          </Routes>
-        </div>
-        </ErrorBoundary>
-        <Footer />
+         <TaskProvider>
+              {/* Conditionally render Navbar nd sidebar based on login state */}
+              {isLoggedIn && <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />} 
+              {isLoggedIn ? (
+                 <UserNavbar /> // Show after login
+               ) : authPages.includes(location.pathname) ? (
+               <AuthNavbar /> // Show on login and signup pages
+               ) : (
+                <Navbar /> // Default navbar
+               )}
+           <ErrorBoundary>
+             <div className="content ">
+               <Routes>
+                 <Route path="/" element={<Homepage />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/profile" element={<UserProfilePage />} />
+                  <Route path="/settings" element={<SettingsPage />} />
+                  <Route path="/reports" element={<ReportsPage />} />
+                  <Route path="/tasks" element={<TasksPage />} />
+                  <Route path="/repositories" element={<RepositoriesPage />} />
+                  <Route path="/contact" element={<ContactUs />} /> 
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/signup" element={<Signup />} />  
+                  <Route path="/create-repo" element={<CreateRepo />} />
+                  <Route path="*" element={<div>Page Not Found</div>} />
+                  <Route path="/repo/:repoId" element={<RepositoryView />} />
+                  <Route path="/repos/:repoId/files/:filePath" element={<FileViewer />} />
+                </Routes>
+              </div>
+            </ErrorBoundary>
+           <Footer /> 
+         </TaskProvider>
         </SocketProvider>
       </div>
   );

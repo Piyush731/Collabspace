@@ -69,7 +69,7 @@ const decodeBase64 = (base64) => {
 const RepositoryView = () => {
   const { repoId } = useParams();
   const { user } = useAuth();
-  const [tabs, setTabs] = useState(['Code', 'Issues', 'PRs', 'Commits', 'README','Collaborators']);
+  const [tabs, setTabs] = useState(['Code', 'Issues', 'PRs', 'Commits', 'README','Collaborators','JIRA Issues']);
   const [repoData, setRepoData] = React.useState(null);
   const [branches, setBranches] = React.useState([]);
   const [activeBranch, setActiveBranch] = useState('main');
@@ -88,6 +88,7 @@ const RepositoryView = () => {
   const [editorDimensions, setEditorDimensions] = useState({ width: 0, height: 0 }); 
 const [isLoading, setIsLoading] = useState(false);
 const [isFileLoading, setIsFileLoading] = useState(false);
+const [selectedDirectory, setSelectedDirectory] = useState('');
 const [issues, setIssues] = useState([]);
 const [prs, setPrs] = useState([]);
 const [readmeContent, setReadmeContent] = useState('');
@@ -98,7 +99,55 @@ const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 const [showChat, setShowChat] = useState(false);
 const [showAddCollaborator, setShowAddCollaborator] = useState(false); 
 const [collaborators, setCollaborators] = useState([]); 
+const [showJiraModal, setShowJiraModal] = useState(false);
+const [selectedCode, setSelectedCode] = useState('');
+const [codeMarkers, setCodeMarkers] = useState([]);
+const [jiraIssues, setJiraIssues] = useState([]);
 
+
+// Add these functions before the return statement
+const handleCodeSelection = (selection) => {
+  setSelectedCode(selection);
+  if (selection.length > 0) {
+    setShowJiraModal(true);
+  }
+};
+const fetchJiraIssues = async () => {
+  try {
+    const res = await fetch(`${API_URL}/api/jira/issues?repoId=${repoId}`);
+    const data = await res.json();
+    setJiraIssues(data.issues);
+  } catch (error) {
+    toast.error('Failed to load JIRA issues');
+  }
+};
+
+const handleJiraCreate = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_URL}/api/jira/create-issue`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        repoId,
+        filePath: selectedFile?.path,
+        codeSnippet: selectedCode,
+        branch: activeBranch,
+        message: "Bug found in code"
+      })
+    });
+
+    if (!response.ok) throw new Error('Failed to create JIRA issue');
+    
+    toast.success('JIRA issue created successfully!');
+    setShowJiraModal(false);
+  } catch (error) {
+    toast.error(`JIRA creation failed: ${error.message}`);
+  }
+};
 
 useEffect(() => {
   if (tabsContentRef.current) {
@@ -497,7 +546,7 @@ const fetchFileContent = async (file) => {
     }
 
     const result = await response.json();
-    console.log('Save Successful:', result);
+    console.log('Save Successful:', result); 
     
     toast.success(`File ${isNewFile ? 'created' : 'updated'} successfully`);
     await fetchFileContent(selectedFile);
@@ -541,7 +590,7 @@ const fetchFileContent = async (file) => {
     setSelectedFile(file);
     setFileContent(file.content);
     if (!tabs.includes('Editor')) {
-      setTabs(['Code', 'Editor', 'Issues', 'PRs', 'Commits', 'README','Collaborators']);
+      setTabs(['Code', 'Editor', 'Issues', 'PRs', 'Commits', 'README','Collaborators','JIRA Issues']);
     }
     setActiveTab(1); // Switch to Editor tab
   };
@@ -549,7 +598,7 @@ const fetchFileContent = async (file) => {
   useEffect(() => {
     // Update tabs array when file is selected/deselected
     if (selectedFile && !tabs.includes('Editor')) {
-      setTabs(['Code', 'Editor', 'Issues', 'PRs', 'Commits', 'README']);
+      setTabs(['Code', 'Editor', 'Issues', 'PRs', 'Commits', 'README','Collaborators','JIRA Issues']);
     } else if (!selectedFile && tabs.includes('Editor')) {
       const newTabs = tabs.filter(tab => tab !== 'Editor');
       setTabs(newTabs);
@@ -592,6 +641,31 @@ const handleRepositoryAction = (action) => {
       setIsModalOpen(true);
     }; 
 
+    const JiraModal = () => (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000]">
+        <div className="bg-white p-6 rounded-lg w-96">
+          <h3 className="text-xl font-bold mb-4">Create JIRA Issue</h3>
+          <div className="mb-4">
+            <p className="text-sm text-gray-600 mb-2">Selected Code:</p>
+            <pre className="bg-gray-100 p-2 rounded text-xs overflow-auto max-h-32">
+              {selectedCode}
+            </pre>
+          </div>
+          <button 
+            onClick={handleJiraCreate}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full"
+          >
+            Create Issue
+          </button>
+          <button
+            onClick={() => setShowJiraModal(false)}
+            className="mt-2 text-gray-600 hover:text-gray-800 w-full"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    );
 
     if (!repoData) return <LoadingRepository />;
 
@@ -727,7 +801,7 @@ const handleRepositoryAction = (action) => {
                        onFileSelect={async (item) => {
                         setSelectedFile(item);
                         if (!tabs.includes('Editor')) {
-                          setTabs(['Code', 'Editor', 'Issues', 'PRs', 'Commits', 'README','Collaborators']);
+                          setTabs(['Code', 'Editor', 'Issues', 'PRs', 'Commits', 'README','Collaborators','JIRA Issues']);
                         }
                         setActiveTab(1); // Force switch to Editor tab
                     
@@ -740,11 +814,16 @@ const handleRepositoryAction = (action) => {
                           setIsFileLoading(false);
                         }
                       }}
-                      currentPath={currentPath}
-                      onPathChange={(path) => {
+                       currentPath={currentPath}
+                       onPathChange={(path) => {
                         setCurrentPath(path);
                         fetchDirectoryContents(activeBranch, path);
                       }}
+                      selectedDirectory={currentPath}
+                      setSelectedDirectory={(path) => {
+                      setCurrentPath(path);
+                      fetchDirectoryContents(activeBranch, path);
+                     }}
                       isLoading={isLoading}
                     />
                   </div>
@@ -817,7 +896,24 @@ const handleRepositoryAction = (action) => {
                               padding: { top: 20, bottom: 20 }
                             }}
                             key={selectedFile?.path || 'empty'}
-                          />
+                            onValidate={(markers) => setCodeMarkers(markers)}
+  onMount={(editor) => {
+    editor.onDidChangeCursorSelection(({ selection }) => {
+      const selectedText = editor.getModel().getValueInRange(selection);
+      handleCodeSelection(selectedText);
+    });  editor.addAction({
+      id: 'create-jira-issue',
+      label: 'Create JIRA Issue',
+      contextMenuGroupId: 'navigation',
+      contextMenuOrder: 1,
+      run: () => {
+        const selection = editor.getSelection();
+        const selectedText = editor.getModel().getValueInRange(selection);
+        handleCodeSelection(selectedText);
+      }
+    });
+  }}
+                           />
                         </motion.div>
                       ) : (
                         <motion.div
@@ -962,7 +1058,7 @@ const handleRepositoryAction = (action) => {
         </div>
       ) : readmeContent ? (
         <article className="prose max-w-none bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <pre className="whitespace-pre-wrap font-sans text-black m-0">
+          <pre className="whitespace-pre-wrap font-sans text-white m-0">
             {readmeContent}
           </pre>
         </article>
@@ -980,6 +1076,7 @@ const handleRepositoryAction = (action) => {
   </div>
 </TabPanel>
 <TabPanel className="h-full flex flex-col mt-2">
+  
 
 {showAddCollaborator && (
   <AddCollaboratorModal
@@ -1100,9 +1197,51 @@ const handleRepositoryAction = (action) => {
     </motion.div>
   </div> 
 </TabPanel>
+<TabPanel className="h-full flex flex-col">
+  <div className="p-4">
+    <div className="flex justify-between items-center mb-4">
+      <h2 className="text-2xl font-bold">JIRA Issues ({jiraIssues.length})</h2>
+      <button 
+        onClick={() => window.open(`${process.env.JIRA_BASE_URL}/browse/${process.env.JIRA_PROJECT_KEY}`, '_blank')}
+        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+      >
+        Open JIRA Board
+      </button>
+    </div>
+    
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {jiraIssues.map(issue => (
+        <div key={issue.id} className="bg-white p-4 rounded-lg shadow border border-gray-200">
+          <div className="flex items-center gap-3 mb-2">
+            <span className={`px-2 py-1 rounded text-sm ${
+              issue.fields.status.statusCategory.key === 'done' 
+                ? 'bg-green-100 text-green-800' 
+                : 'bg-yellow-100 text-yellow-800'
+            }`}>
+              {issue.fields.status.name}
+            </span>
+            <a 
+              href={`${process.env.JIRA_BASE_URL}/browse/${issue.key}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-blue-600 hover:underline"
+            >
+              {issue.key}
+            </a>
+          </div>
+          <p className="text-gray-800 mb-2">{issue.fields.summary}</p>
+          <p className="text-sm text-gray-600">
+            <span className="font-semibold">File:</span> {issue.fields.description.content[0].content[0].text.match(/File: (.*)/)[1]}
+          </p>
+        </div>
+      ))}
+    </div>
+  </div>
+</TabPanel>
           </div>
         </Tabs>
       </div>
+      {showJiraModal && <JiraModal />}
       <ChatModal repoId={repoId} showChat={showChat} />
       <motion.button 
   onClick={() => setShowChat(!showChat)}
@@ -1130,6 +1269,7 @@ const handleRepositoryAction = (action) => {
           },
         }}
       />
+      
     </div>
     
   );

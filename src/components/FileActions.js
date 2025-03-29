@@ -3,53 +3,91 @@ import { Dialog } from '@headlessui/react';
 import { motion } from 'framer-motion'; 
 import { AiOutlineFileAdd, AiOutlineFolderAdd, AiOutlineUpload, AiOutlineFile, AiOutlineDownload } from 'react-icons/ai';
 
-const FileActions = ({ path, onCreateFile, onCreateDirectory, onFolderUpload, onFileUpload, onDownloadZip }) => {
+const FileActions = ({ 
+  path, 
+  onCreateFile, 
+  onCreateDirectory, 
+  onFolderUpload, 
+  onFileUpload, 
+  onDownloadZip 
+}) => {
   const [fileModalOpen, setFileModalOpen] = useState(false);
   const [dirModalOpen, setDirModalOpen] = useState(false);
   const [fileName, setFileName] = useState('');
   const [dirName, setDirName] = useState('');
   const [fileContent, setFileContent] = useState('');
-  const [isUploading, setIsUploading] = useState(false);
+  const [isUploadingFolder, setIsUploadingFolder] = useState(false);
   const [isUploadingFile, setIsUploadingFile] = useState(false); 
   const [isCreatingFile, setIsCreatingFile] = useState(false);
   const [isCreatingDir, setIsCreatingDir] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
-
-  const handleFileSubmit = (e) => {
+  const handleFileSubmit = async (e) => {
     e.preventDefault();
     setIsCreatingFile(true);
-    const fullPath = path ? `${path}/${fileName}` : fileName;
-    onCreateFile({
-      path: fullPath,
-      content: fileContent
-    });
-    setIsCreatingFile(false);
-    setFileModalOpen(false);
-    setFileName('');
-    setFileContent('');
+    try {
+      const fullPath = path ? `${path}/${fileName}` : fileName;
+      await onCreateFile({
+        path: fullPath,
+        content: fileContent
+      });
+      setFileModalOpen(false);
+      setFileName('');
+      setFileContent('');
+    } finally {
+      setIsCreatingFile(false);
+    }
   };
 
-  const handleDirSubmit = (e) => {
+  const handleDirSubmit = async (e) => {
     e.preventDefault();
     setIsCreatingDir(true);
-    const fullPath = path ? `${path}/${dirName}` : dirName;
-    onCreateDirectory(fullPath);
-    setIsCreatingDir(false);
-    setDirModalOpen(false);
-    setDirName('');
+    try {
+      const fullPath = path ? `${path}/${dirName}` : dirName;
+      await onCreateDirectory(fullPath);
+      setDirModalOpen(false);
+      setDirName('');
+    } finally {
+      setIsCreatingDir(false);
+    }
   };
 
   const handleFolderUpload = async (e) => {
-    setIsUploading(true);
-    await onFolderUpload(e);
-    setIsUploading(false);
+    setIsUploadingFolder(true);
+    try {
+      await onFolderUpload(e);
+    } finally {
+      setIsUploadingFolder(false);
+    }
   };
 
   const handleFileUpload = async (e) => {
     setIsUploadingFile(true);
-    await onFileUpload(e);
-    setIsUploadingFile(false);
+    try {
+      await onFileUpload(e);
+    } finally {
+      setIsUploadingFile(false);
+    }
   };
+
+  const handleDownload = async () => {
+    setIsDownloading(true);
+    try {
+      await onDownloadZip();
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  // Custom Spinner Component
+  const Spinner = ({ size = 20 }) => (
+    <div className="flex items-center justify-center">
+      <div 
+        className="animate-spin rounded-full border-t-2 border-b-2 border-white"
+        style={{ width: size, height: size }}
+      />
+    </div>
+  );
 
   return (
     <div className="flex items-center gap-4 p-0.5 border-b border-gray-200 bg-white shadow-sm -mt-5 -mb-5 -ml-3 -mr-3">
@@ -73,73 +111,85 @@ const FileActions = ({ path, onCreateFile, onCreateDirectory, onFolderUpload, on
         <AiOutlineFolderAdd size={18} /> Create Directory
       </motion.button>
 
-      {/* File Upload */}
+      {/* Folder Upload */}
       <motion.label
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         className={`flex items-center gap-2 px-4 py-2 ${
-          isUploading ? 'bg-purple-500' : 'bg-purple-600'
+          isUploadingFolder ? 'bg-purple-500' : 'bg-purple-600'
         } text-white rounded-lg hover:bg-purple-700 cursor-pointer`}
       >
-        {isUploading ? (
-    <div className="flex items-center gap-2">
-      <span className="animate-spin">⏳</span>
-      Uploading...
-    </div>
-  ) : (
-        <>
-        <AiOutlineUpload size={18} />
-         Upload Folder
-        </>
-  )}
+        {isUploadingFolder ? (
+          <>
+            <Spinner size={16} />
+            Uploading...
+          </>
+        ) : (
+          <>
+            <AiOutlineUpload size={18} />
+            Upload Folder
+          </>
+        )}
         <input 
           type="file"
           multiple 
           webkitdirectory="true" 
           onChange={handleFolderUpload} 
-          style={{ display: 'none' }}
-          id="file-upload"
           className="hidden" 
-          disabled={isUploading}
+          disabled={isUploadingFolder}
         />
       </motion.label>
 
       {/* File Upload */}
-<motion.label
-  whileHover={{ scale: 1.05 }}
-  whileTap={{ scale: 0.95 }}
-  className={`flex items-center gap-2 px-4 py-2 ${
-    isUploadingFile ? 'bg-red-500' : 'bg-red-600'
-  } text-white rounded-lg hover:bg-red-700 cursor-pointer`}
->
-  {isUploadingFile ? (
-    <div className="flex items-center gap-2">
-      <span className="animate-spin">⏳</span>
-      Uploading...
-    </div>
-  ) : (
-    <>
-      <AiOutlineFile size={18} />
-      Upload File
-    </>
-  )}
-  <input 
-    type="file"
-    multiple
-    onChange={handleFileUpload}
-    style={{ display: 'none' }}
-    disabled={isUploadingFile}
-  />
-</motion.label>
-<motion.button 
-  onClick={onDownloadZip}
-  whileHover={{ scale: 1.05 }}
-  whileTap={{ scale: 0.95 }}
-  className="flex items-center gap-2 bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700"
->
-  <AiOutlineDownload size={18} /> Download ZIP
-</motion.button>
+      <motion.label
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        className={`flex items-center gap-2 px-4 py-2 ${
+          isUploadingFile ? 'bg-red-500' : 'bg-red-600'
+        } text-white rounded-lg hover:bg-red-700 cursor-pointer`}
+      >
+        {isUploadingFile ? (
+          <>
+            <Spinner size={16} />
+            Uploading...
+          </>
+        ) : (
+          <>
+            <AiOutlineFile size={18} />
+            Upload File
+          </>
+        )}
+        <input 
+          type="file"
+          multiple
+          onChange={handleFileUpload}
+          className="hidden"
+          disabled={isUploadingFile}
+        />
+      </motion.label>
 
+      {/* Download ZIP */}
+      <motion.button 
+        onClick={handleDownload}
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        className={`flex items-center gap-2 px-4 py-2 ${
+          isDownloading ? 'bg-yellow-500' : 'bg-yellow-600'
+        } text-white rounded-lg hover:bg-yellow-700`}
+        disabled={isDownloading}
+      >
+        {isDownloading ? (
+          <>
+            <Spinner size={16} />
+            Downloading...
+          </>
+        ) : (
+          <>
+            <AiOutlineDownload size={18} /> 
+            Download ZIP
+          </>
+        )}
+      </motion.button>
 
       {/* File Creation Modal */}
       <Dialog open={fileModalOpen} onClose={() => setFileModalOpen(false)} className="relative z-50">
@@ -183,10 +233,15 @@ const FileActions = ({ path, onCreateFile, onCreateDirectory, onFolderUpload, on
                     type="submit"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2 min-w-[120px]"
                     disabled={isCreatingFile}
                   >
-                    {isCreatingFile ? <span className="animate-spin">⏳</span> : "Create File"}
+                    {isCreatingFile ? (
+                      <>
+                        <Spinner size={16} />
+                        Creating...
+                      </>
+                    ) : "Create File"}
                   </motion.button>
                 </div>
               </div>
@@ -228,10 +283,15 @@ const FileActions = ({ path, onCreateFile, onCreateDirectory, onFolderUpload, on
                     type="submit"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center gap-2 min-w-[120px]"
                     disabled={isCreatingDir}
                   >
-                    {isCreatingDir ? <span className="animate-spin">⏳</span> : "Create Directory"}
+                    {isCreatingDir ? (
+                      <>
+                        <Spinner size={16} />
+                        Creating...
+                      </>
+                    ) : "Create Directory"}
                   </motion.button>
                 </div>
               </div>

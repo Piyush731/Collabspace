@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronRightIcon, FolderIcon, DocumentIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { ChevronRightIcon, ChevronDownIcon, FolderIcon, DocumentIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { motion } from "framer-motion";
 import API_URL from '../config';
 
-const FileTree = ({ contents, onFileSelect, currentPath, onPathChange, isLoading, repoId, activeBranch }) => {
+const FileTree = ({ contents, onFileSelect, currentPath, onPathChange, isLoading, repoId, activeBranch,  selectedDirectory,
+  setSelectedDirectory }) => {
   const [expandedDirs, setExpandedDirs] = useState({});
   const [childrenMap, setChildrenMap] = useState({});
   const [hoveredFile, setHoveredFile] = useState(null);
@@ -33,10 +34,30 @@ const FileTree = ({ contents, onFileSelect, currentPath, onPathChange, isLoading
       return [];
     }
   };
+
+  const handleChevronClick = async (e, item) => {
+    e.stopPropagation();
+    const isExpanded = !expandedDirs[item.path];
+    setExpandedDirs(prev => ({ ...prev, [item.path]: isExpanded }));
+
+    if (isExpanded && !childrenMap[item.path]) {
+      try {
+        const children = await fetchChildren(item.path);
+        setChildrenMap(prev => ({
+          ...prev,
+          [item.path]: children
+        }));
+      } catch (error) {
+        console.error('Error fetching directory:', error);
+      }
+    }
+  };
+
   const handleDirClick = async (item) => {
     // Toggle expansion state
     const isExpanded = !expandedDirs[item.path];
     setExpandedDirs(prev => ({ ...prev, [item.path]: isExpanded }));
+    setSelectedDirectory(item.path); 
 
     // Only fetch contents if not already loaded
     if (isExpanded && !childrenMap[item.path]) {
@@ -83,84 +104,131 @@ const FileTree = ({ contents, onFileSelect, currentPath, onPathChange, isLoading
     }
   };
 
-  const renderTree = (items, depth = 0) => {
+   // GitHub-like directory structure with proper indentation
+   const renderTree = (items, depth = 0) => {
     return items.map((item) => (
-      <div key={item.path}>
+      <div key={item.path} className="relative">
+        {/* Directory/File Row */}
         <motion.div
-          className="relative w-full overflow-visible flex items-center group hover:bg-gray-200 rounded-md p-1 cursor-pointer transition-all"
+          className={`flex items-center group hover:bg-gray-100 rounded-md px-2 py-1 cursor-pointer ${
+            item.type === 'dir' ? 'font-medium' : 'text-gray-700'
+          }`}
           style={{ paddingLeft: `${depth * 20}px` }}
-          onClick={() => (item.type === "dir" ? handleDirClick(item) : onFileSelect(item))}
-          initial={{ opacity: 0, y: -5 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -5 }}
+          onClick={() => {
+            if (item.type === 'dir') {
+              handleDirClick(item);
+              onPathChange(item.path);
+            } else {
+              onFileSelect(item);
+            }
+          }}
+          onMouseEnter={() => setHoveredFile(item.path)}
+          onMouseLeave={() => setHoveredFile(null)}
+          initial={{ opacity: 0, x: -5 }}
+          animate={{ opacity: 1, x: 0 }}
         >
-          {item.type === "dir" ? (
+          {/* Directory Chevron and Icon */}
+          {item.type === 'dir' && (
             <>
-              <ChevronRightIcon
-                className={`w-4 h-4 mr-1 transition-transform ${
-                  expandedDirs[item.path] ? "rotate-90" : ""
-                }`}
-              />
+            <button
+              onClick={(e) => handleChevronClick(e, item)}
+              className="mr-1 hover:bg-gray-200 rounded p-1"
+            >
+              {expandedDirs[item.path] ? (
+                <ChevronDownIcon className="w-4 h-4 text-gray-600" />
+              ) : (
+                <ChevronRightIcon className="w-4 h-4 text-gray-600" />
+              )}
+            </button>
+            <div 
+              className="flex items-center flex-1"
+              onClick={() => handleDirClick(item)}
+            >
               <FolderIcon className="w-5 h-5 text-blue-500 mr-2" />
-            </>
-          ) : (
+              <span className="truncate">{item.name}</span>
+            </div>
+          </>
+          )}
+
+          {/* File Icon */}
+          {item.type === 'file' && (
             <DocumentIcon className="w-5 h-5 text-gray-500 mr-2" />
           )}
-          <span className="text-sm flex-1 truncate">{item.name}</span>
 
-          {item.type === "file" && (
+          {/* Name */}
+          <span className="truncate">{item.name}</span>
+
+          {/* GitHub-like Delete Button */}
+          {item.type === 'file' && hoveredFile === item.path && (
             <motion.button
               onClick={(e) => {
                 e.stopPropagation();
                 handleDeleteFile(item.path);
               }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 bg-red-100 text-black w-8 h-8 flex items-center justify-center 
-                rounded-full transition-opacity border border-gray-300 shadow-lg z-50 opacity-0 group-hover:opacity-100 overflow-visible"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              disabled={deletingFile === item.path}
+              className="absolute right-2 bg-red-50 text-red-600 p-1 rounded-full hover:bg-red-100"
+              initial={{ scale: 0.8 }}
+              animate={{ scale: 1 }}
             >
-              {deletingFile === item.path ? (
-                <span className="animate-spin">⏳</span>
-              ) : (
-                <TrashIcon className="w-5 h-5 text-black" />
-              )}
+              <TrashIcon className="w-4 h-4" />
             </motion.button>
           )}
         </motion.div>
 
+        {/* Nested Children */}
         {item.type === 'dir' && expandedDirs[item.path] && childrenMap[item.path] && (
-          <div className="ml-4">
+          <div className="ml-2 border-l-2 border-gray-100">
             {renderTree(childrenMap[item.path], depth + 1)}
           </div>
         )}
       </div>
     ));
   };
-  
+
+  // GitHub-style Breadcrumb Navigation
+  const Breadcrumb = () => {
+    const pathParts = currentPath.split('/').filter(p => p);
     
+    return (
+      <div className="flex items-center text-sm text-gray-600 mb-4">
+        <button
+          onClick={() => {
+            onPathChange('');
+            setExpandedDirs({});
+          }}
+          className="hover:text-blue-600 hover:underline"
+        >
+          root
+        </button>
+        {pathParts.map((part, index) => {
+          const pathSoFar = pathParts.slice(0, index + 1).join('/');
+          return (
+            <span key={pathSoFar} className="flex items-center">
+              <span className="mx-1">/</span>
+              <button
+                onClick={() => onPathChange(pathSoFar)}
+                className="hover:text-blue-600 hover:underline"
+              >
+                {part}
+              </button>
+            </span>
+          );
+        })}
+      </div>
+    );
+  };
 
   return (
     <div className="border rounded-lg p-4 bg-white">
-      <div className="flex justify-between items-center mb-2">
-        <h3 className="font-semibold">File Explorer</h3>
-        {isLoading && <div className="text-sm text-gray-500">Loading...</div>}
-      </div>
+      <Breadcrumb />
       
-      <div className="flex items-center mb-2 text-sm">
-        {currentPath.split('/').map((part, index) => (
-          <button
-            key={index}
-            onClick={() => onPathChange(currentPath.split('/').slice(0, index).join('/'))}
-            className="text-blue-600 hover:text-blue-800"
-          >
-            {part || 'root'} {index > 0 && '/'}
-          </button>
-        ))}
-      </div>
-
-      <div className="mt-2">
-      {renderTree(sortedContents)}
+      <div className="space-y-1">
+        {isLoading ? (
+          <div className="text-center text-gray-500 py-4">
+            Loading directory contents...
+          </div>
+        ) : (
+          renderTree(sortedContents)
+        )}
       </div>
     </div>
   );

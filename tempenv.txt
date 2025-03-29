@@ -5,6 +5,10 @@ GITEA_URL=https://b00f-2405-201-680f-5a66-c0f6-87e8-c6ac-5a7b.ngrok-free.app/
 GITEA_ADMIN_TOKEN=843ed12448867fb52f573843ce32d40761e89f76
 REACT_APP_API_URL=https://collabspace-gvu9.onrender.com
 FRONTEND_URL=https://collabspace-one.vercel.app/
+JIRA_BASE_URL=https://piyushkashyap3247.atlassian.net/jira/dashboards/10001
+JIRA_API_TOKEN=ATATT3xFfGF02xhG62AGc3C6Q1VzBYBSznyF2FCG-X3mVbBNUil8aheQr8KwUPVOJVZhTyDZlx3eYJswLKCC3xu-9mBIwNz1OBgrqSWzoGfVTR0I3cSqODlhxW6C4K11tM3YP4if3i3kTHJ3LEkpyfmPXbMVwXB1FH_oPWVKbUvN9V0jumglr0w=36A300A8
+JIRA_PROJECT_KEY=SCRUM
+JIRA_EMAIL=piyushkashyap3247@gmail.com
 
 PORT=5000
 MONGO_URL=mongodb+srv://piyushkashyap3247:qWZRz322yrgtok6B@collabspace.q2pkl.mongodb.net/?retryWrites=true&w=majority&appName=CollabSpace
@@ -13,49 +17,14 @@ REACT_APP_API_URL=http://localhost:5000
 FRONTEND_URL=http://localhost:3000
 GITEA_URL=http://localhost:3001
 GITEA_ADMIN_TOKEN=843ed12448867fb52f573843ce32d40761e89f76
+JIRA_BASE_URL=https://piyushkashyap3247.atlassian.net/jira/dashboards/10001
+JIRA_API_TOKEN=ATATT3xFfGF02xhG62AGc3C6Q1VzBYBSznyF2FCG-X3mVbBNUil8aheQr8KwUPVOJVZhTyDZlx3eYJswLKCC3xu-9mBIwNz1OBgrqSWzoGfVTR0I3cSqODlhxW6C4K11tM3YP4if3i3kTHJ3LEkpyfmPXbMVwXB1FH_oPWVKbUvN9V0jumglr0w=36A300A8
+JIRA_PROJECT_KEY=SCRUM
+JIRA_EMAIL=piyushkashyap3247@gmail.com
+
 
 
 Change cors everytime, .env(backend) and config.js(frontend) 
 
 
 
-
-
-
-
-
-
-exports.addCollaborator = async (req, res) => {
-  try {
-    const { username, permission } = req.body;
-    const repoId = req.params.repoId;
-    const repo = await Repository.findById(repoId);
-    const owner = await User.findById(repo.owner);
-
-    await axios.put(
-      `${process.env.GITEA_URL}/api/v1/repos/${owner.username}/${repo.name}/collaborators/${username}`,
-      { permission },
-      { headers: { Authorization: `token ${owner.giteaToken}` } }
-    );
-
-    const giteaResponse = await axios.get(
-      `${process.env.GITEA_URL}/api/v1/repos/${owner.username}/${repo.name}/collaborators`,
-      { headers: { Authorization: `token ${owner.giteaToken}` } }
-    );
-
-    const usernames = giteaResponse.data.map(c => c.username);
-    const users = await User.find({ username: { $in: usernames } });
-    
-    const mappedCollaborators = collaborators.data.map(c => ({
-      user: users.find(u => u.username === c.username)?._id?.toString(),
-      permission: c.permission, // Ensure lowercase
-    })).filter(c => c.user); 
-
-    repo.collaborators = mappedCollaborators;
-    await repo.save();
-    res.json(mappedCollaborators);
-  } catch (error) {
-    console.error('Error adding collaborator:', error);
-    res.status(500).json({ error: 'Failed to add collaborator' });
-  }
-};
