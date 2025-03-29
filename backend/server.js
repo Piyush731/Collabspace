@@ -8,7 +8,6 @@ const authRoutes = require("./routes/authRoutes");
 const repoRoutes = require("./routes/repoRoutes");
 const messageRoutes = require("./routes/messageRoutes");
 const uploadRoutes = require("./routes/uploadRoutes");
-const taskRoutes = require("./routes/taskRoutes");
 const jiraRoutes = require('./routes/jiraRoutes');
 const initializeSocket = require("./config/socket") 
 const multer = require('multer');
@@ -33,7 +32,6 @@ app.use("/api/auth", authRoutes);
 app.use("/api/repos", repoRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/upload", uploadRoutes);
-app.use("/api/tasks", taskRoutes);
 app.use("/api/jira", jiraRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/uploads", express.static("uploads"));
