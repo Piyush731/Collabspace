@@ -16,4 +16,8 @@ router.post('/:repoId/merge', gitController.mergeBranches);
 router.get('/:repoId/conflicts', gitController.getConflicts);
 router.post('/:repoId/resolve-conflict', gitController.resolveConflict);
 
+// Commit and push operations
+router.post('/:repoId/commit', gitController.commitChanges);
+router.post('/:repoId/push', gitController.pushChanges);
+
 module.exports = router; 

@@ -3,11 +3,32 @@ import { FiGitBranch, FiGitMerge, FiAlertTriangle } from 'react-icons/fi';
 import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import axios from 'axios';
+import API_URL from '../config';
+import ConflictResolver from './ConflictResolver';
+
+// Create axios instance with base URL
+const api = axios.create({ baseURL: API_URL });
+
+// Automatically include the auth token in all requests
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
 const GitOperations = ({ repoId, onBranchChange }) => {
   const [branches, setBranches] = useState([]);
   const [currentBranch, setCurrentBranch] = useState('main');
   const [conflicts, setConflicts] = useState([]);
+  const [allResolvedFiles, setAllResolvedFiles] = useState([]);
+  const [commitMessage, setCommitMessage] = useState('');
+  const [isCommitting, setIsCommitting] = useState(false);
+  const [isPushing, setIsPushing] = useState(false);
   const [isMerging, setIsMerging] = useState(false);
   const [mergeSource, setMergeSource] = useState('');
   const [mergeTarget, setMergeTarget] = useState('');
@@ -19,7 +40,7 @@ const GitOperations = ({ repoId, onBranchChange }) => {
 
   const fetchBranches = async () => {
     try {
-      const response = await axios.get(`/api/repos/${repoId}/branches`);
+      const response = await api.get(`/api/repos/${repoId}/branches`);
       setBranches(response.data);
     } catch (error) {
       toast.error('Failed to fetch branches');
@@ -28,7 +49,7 @@ const GitOperations = ({ repoId, onBranchChange }) => {
 
   const fetchConflicts = async () => {
     try {
-      const response = await axios.get(`/api/repos/${repoId}/conflicts`);
+      const response = await api.get(`/api/repos/${repoId}/conflicts`);
       setConflicts(response.data);
     } catch (error) {
       toast.error('Failed to fetch conflicts');
@@ -37,7 +58,7 @@ const GitOperations = ({ repoId, onBranchChange }) => {
 
   const createBranch = async (branchName) => {
     try {
-      await axios.post(`/api/repos/${repoId}/branches`, { name: branchName });
+      await api.post(`/api/repos/${repoId}/branches`, { name: branchName });
       toast.success(`Branch ${branchName} created successfully`);
       fetchBranches();
     } catch (error) {
@@ -47,7 +68,7 @@ const GitOperations = ({ repoId, onBranchChange }) => {
 
   const switchBranch = async (branchName) => {
     try {
-      await axios.post(`/api/repos/${repoId}/switch-branch`, { branch: branchName });
+      await api.post(`/api/repos/${repoId}/switch-branch`, { branch: branchName });
       setCurrentBranch(branchName);
       onBranchChange(branchName);
       toast.success(`Switched to branch ${branchName}`);
@@ -64,7 +85,7 @@ const GitOperations = ({ repoId, onBranchChange }) => {
 
     setIsMerging(true);
     try {
-      const response = await axios.post(`/api/repos/${repoId}/merge`, {
+      const response = await api.post(`/api/repos/${repoId}/merge`, {
         source: mergeSource,
         target: mergeTarget
       });
@@ -72,9 +93,13 @@ const GitOperations = ({ repoId, onBranchChange }) => {
       if (response.data.hasConflicts) {
         toast.error('Merge conflicts detected');
         fetchConflicts();
+        setAllResolvedFiles([]);
       } else {
         toast.success('Merge completed successfully');
+        setCurrentBranch(mergeTarget);
+        onBranchChange(mergeTarget);
         fetchBranches();
+        fetchConflicts();
       }
     } catch (error) {
       toast.error('Failed to merge branches');
@@ -84,7 +109,7 @@ const GitOperations = ({ repoId, onBranchChange }) => {
 
   const resolveConflict = async (filePath, resolution) => {
     try {
-      await axios.post(`/api/repos/${repoId}/resolve-conflict`, {
+      await api.post(`/api/repos/${repoId}/resolve-conflict`, {
         filePath,
         resolution
       });
@@ -95,8 +120,43 @@ const GitOperations = ({ repoId, onBranchChange }) => {
     }
   };
 
+  const handleAllResolved = (resolved) => {
+    setAllResolvedFiles(resolved);
+  };
+
+  const handleCommit = async () => {
+    setIsCommitting(true);
+    try {
+      await api.post(`/api/repos/${repoId}/commit`, {
+        branch: mergeTarget,
+        message: commitMessage || `Fixed merge conflicts in ${allResolvedFiles.join(', ')}`
+      });
+      toast.success('Committed changes successfully');
+    } catch (error) {
+      toast.error('Failed to commit changes');
+    } finally {
+      setIsCommitting(false);
+    }
+  };
+
+  const handlePush = async () => {
+    setIsPushing(true);
+    try {
+      await api.post(`/api/repos/${repoId}/push`, { branch: mergeTarget });
+      toast.success('Pushed changes successfully');
+      fetchBranches();
+      fetchConflicts();
+      setAllResolvedFiles([]);
+      setCommitMessage('');
+    } catch (error) {
+      toast.error('Failed to push changes');
+    } finally {
+      setIsPushing(false);
+    }
+  };
+
   return (
-    <div className="bg-slate-800 rounded-lg p-6 space-y-6">
+    <div className="bg-slate-800 rounded-lg p-6 space-y-6 h-full flex flex-col overflow-auto">
       {/* Branch Management */}
       <div className="space-y-4">
         <h3 className="text-xl font-semibold flex items-center gap-2">
@@ -173,55 +233,54 @@ const GitOperations = ({ repoId, onBranchChange }) => {
         </div>
       </div>
 
-      {/* Conflict Resolution */}
-      {conflicts.length > 0 && (
+      {/* Conflict Resolution and Commit Panel */}
+      {conflicts.length > 0 && allResolvedFiles.length < conflicts.length && (
         <div className="space-y-4">
           <h3 className="text-xl font-semibold flex items-center gap-2 text-red-400">
             <FiAlertTriangle />
             Merge Conflicts
           </h3>
+          <ConflictResolver
+            repoId={repoId}
+            conflicts={conflicts}
+            onAllResolved={handleAllResolved}
+          />
+        </div>
+      )}
 
-          <div className="space-y-4">
-            {conflicts.map((conflict) => (
-              <motion.div
-                key={conflict.filePath}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-slate-700 rounded-lg p-4"
-              >
-                <div className="flex justify-between items-center">
-                  <span className="font-mono">{conflict.filePath}</span>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => resolveConflict(conflict.filePath, 'ours')}
-                      className="bg-green-600 hover:bg-green-700 px-3 py-1 rounded-lg text-sm"
-                    >
-                      Keep Current
-                    </button>
-                    <button
-                      onClick={() => resolveConflict(conflict.filePath, 'theirs')}
-                      className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded-lg text-sm"
-                    >
-                      Keep Incoming
-                    </button>
-                  </div>
-                </div>
-                <div className="mt-4 grid grid-cols-2 gap-4">
-                  <div className="bg-slate-800 p-2 rounded-lg">
-                    <h4 className="text-sm font-semibold mb-2">Current Changes</h4>
-                    <pre className="text-xs overflow-auto max-h-40">
-                      {conflict.currentContent}
-                    </pre>
-                  </div>
-                  <div className="bg-slate-800 p-2 rounded-lg">
-                    <h4 className="text-sm font-semibold mb-2">Incoming Changes</h4>
-                    <pre className="text-xs overflow-auto max-h-40">
-                      {conflict.incomingContent}
-                    </pre>
-                  </div>
-                </div>
-              </motion.div>
+      {allResolvedFiles.length > 0 && (
+        <div className="bg-white p-6 rounded-lg shadow-md space-y-4">
+          <h3 className="text-lg font-semibold">Changes:</h3>
+          <ul className="list-disc list-inside">
+            {allResolvedFiles.map(f => (
+              <li key={f} className="text-green-600">✓ {f} (Conflict resolved)</li>
             ))}
+          </ul>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Commit Message:</label>
+            <input
+              type="text"
+              className="mt-1 block w-full border-gray-300 rounded-md"
+              value={commitMessage}
+              onChange={(e) => setCommitMessage(e.target.value)}
+              placeholder={`Fixed merge conflict in ${allResolvedFiles.join(', ')}`}
+            />
+          </div>
+          <div className="flex gap-4">
+            <button
+              onClick={handleCommit}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded"
+              disabled={isCommitting}
+            >
+              {isCommitting ? 'Committing...' : `Commit to ${mergeTarget}`}
+            </button>
+            <button
+              onClick={handlePush}
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+              disabled={isPushing}
+            >
+              {isPushing ? 'Pushing...' : 'Push Changes'}
+            </button>
           </div>
         </div>
       )}

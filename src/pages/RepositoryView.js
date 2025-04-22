@@ -1231,8 +1231,12 @@ const handleRepositoryAction = (action) => {
             </motion.div>
           </div> 
         </TabPanel>
+        <TabPanel className="h-full flex flex-col mt-2">
+          <h2>JIRA issues </h2>
+        </TabPanel>
+
                 {/* Git Operations Panel */}
-                <TabPanel className="h-full overflow-auto p-4">
+                <TabPanel className="mt-[-25px] mb-25px text-white">
                   <GitOperations
                     repoId={repoId}
                     onBranchChange={(branch) => handleBranchChange(branch)}
