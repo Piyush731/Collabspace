@@ -7,12 +7,16 @@ const BranchSelector = ({ branches, activeBranch, onChange }) => {
       value={activeBranch}
       onChange={(e) => onChange(e.target.value)}
     >
-      {branches.map(branch => (
-        <option key={branch.name} value={branch.name}>
-          🌿 {branch.name}
-          {branch.protected && ' 🔒'}
-        </option>
-      ))}
+      {branches.map(branch => {
+        const name = typeof branch === 'string' ? branch : branch.name;
+        const isProtected = typeof branch === 'object' && branch.protected;
+        return (
+          <option key={name} value={name}>
+            🌿 {name}
+            {isProtected && ' 🔒'}
+          </option>
+        );
+      })}
     </select>
   );
 };

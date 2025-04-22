@@ -578,26 +578,14 @@ const fetchFileContent = async (file) => {
    // socket.emit('code-update', { repoId, code: value });
   };
 
-  const handleBranchChange = async (branch) => {
+  const handleBranchChange = (branch) => {
     setActiveBranch(branch);
-    try {
-      const token = localStorage.getItem('token');
-      // Call backend to switch branch
-      const response = await fetch(`${API_URL}/api/repos/${repoId}/switch-branch`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ branch })
-      });
-      if (!response.ok) throw new Error('Branch switch failed');
-      // After switching branch, reload directory
-      fetchDirectoryContents(branch);
-    } catch (error) {
-      console.error('Error switching branch:', error);
-      toast.error('Failed to switch branch');
-    }
+    // Clear current file selection and editor state
+    setSelectedFile(null);
+    setFileContent('');
+    setCode('');
+    // Load directory for the selected branch
+    fetchDirectoryContents(branch);
   };
 
 // Handler to create a new branch via backend
