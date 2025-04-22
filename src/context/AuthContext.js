@@ -9,8 +9,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
  const [loading, setLoading] = useState(true);
  useEffect(() => {
-  const checkAuth = async () => {
-    //const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  const checkAuth = async () => { 
     const token = localStorage.getItem("token");
     
 
@@ -24,12 +23,12 @@ export const AuthProvider = ({ children }) => {
         setUser(response.data.user);
       } catch (error) {
         console.error("Authentication check failed:", error);
-        localStorage.removeItem("token"); // Remove invalid token
+        localStorage.removeItem("token");
         setIsLoggedIn(false);
         setUser(null);
       }
     }
-    setLoading(false); // Loading complete
+    setLoading(false);
   };
   checkAuth();
   }, []); 
@@ -55,11 +54,12 @@ export const AuthProvider = ({ children }) => {
       setUser(response.data.user);
       return response.data;
     } catch (error) {
-    const errorMessage = error.response?.data?.details?.message || 
-                        error.response?.data?.error ||
-                        'Signup failed';
-    throw errorMessage;
-  }
+      // Try to pick up backend .error or .message fields
+      const data = error.response?.data || {};
+      const errorMessage = data.error || data.message || data.details?.message || error.message || 'Signup failed';
+      console.error('Signup error:', data);
+      throw errorMessage;
+    }
   };
 
   const logout = () => {

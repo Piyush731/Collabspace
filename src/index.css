@@ -1,5 +1,3 @@
-
-
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -7,16 +5,20 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: #0f172a;
+  color: #fff;
 }
 
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
 .grid {
   min-height: 0;
   min-width: 0;
 }
+
 /* In your CSS */
 .sidebar {
   z-index: 1000; /* Higher than navbar's 50 */
@@ -39,6 +41,7 @@ code {
     justify-content: flex-end !important;
   }
 }
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

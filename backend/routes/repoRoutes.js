@@ -4,6 +4,7 @@ const Repository = require('../models/Repository'); // Add this
 const User = require('../models/User'); // Add this
 const axios = require('axios'); // Add this
 const verifyToken = require('../middleware/auth'); 
+const gitController = require('../controllers/gitController');
 
 const {createRepository, getRepository, getUserRepositories, getRepoContents, getRecursiveContents, 
   createFile, updateFile, createDirectory, deleteFile, downloadRepoZip,
@@ -12,6 +13,12 @@ const {createRepository, getRepository, getUserRepositories, getRepoContents, ge
 router.post('/', verifyToken, createRepository); //create 
 router.get('/my-repos', verifyToken, getUserRepositories); //get user repo
 router.get('/:id', verifyToken, getRepository); //get  
+router.get('/:repoId/branches', verifyToken, gitController.getBranches);
+router.post('/:repoId/branches', verifyToken, gitController.createBranch);
+router.post('/:repoId/switch-branch', verifyToken, gitController.switchBranch);
+router.post('/:repoId/merge', verifyToken, gitController.mergeBranches);
+router.get('/:repoId/conflicts', verifyToken, gitController.getConflicts);
+router.post('/:repoId/resolve-conflict', verifyToken, gitController.resolveConflict);
 router.get('/:repoId/contents',verifyToken, getRepoContents);
 router.get('/:repoId/contents/recursive',verifyToken, getRecursiveContents);
 router.post('/:repoId/create-file', verifyToken, createFile);

@@ -16,7 +16,7 @@ exports.createRepository = async (req, res) => {
       if (existingRepo) {
         return res.status(400).json({ error: 'Repository name already exists' });
       }
-    // Create in Gitea
+    
           giteaResponse = await axios.post(
       `${process.env.GITEA_URL}/api/v1/user/repos`,
       {
@@ -32,7 +32,7 @@ exports.createRepository = async (req, res) => {
         }
       }
     ); 
-    // save in MongoDB
+    
     const repository = new Repository({
       name,
       description,
@@ -47,7 +47,7 @@ exports.createRepository = async (req, res) => {
       defaultBranch: giteaResponse.data.default_branch
     }); 
     await repository.save();
-    //combined dta of both
+    
     res.status(201).json({
       ...repository.toObject(),
       gitData: giteaResponse.data
@@ -55,7 +55,7 @@ exports.createRepository = async (req, res) => {
 
   } catch (error) {
     console.error('Repository creation error:', error);
-    // Cleanup of ghost Gitea repo
+    
     if (giteaResponse?.data?.id) {
         await axios.delete(
           `${process.env.GITEA_URL}/api/v1/repos/${owner.username}/${req.body.name}`,
@@ -77,7 +77,6 @@ exports.getRepository = async (req, res) => {
        const owner = await User.findById(repo.owner); 
         const repoName = repo.name;
     // Get Gitea data 
-   // Fetch all Gitea data in parallel
    const [branches, commits, repoDetails, issues, prs, readme, collaborators] = await Promise.all([
     axios.get(`${process.env.GITEA_URL}/api/v1/repos/${owner.username}/${repoName}/branches`,{
       headers: { Authorization: `token ${owner.giteaToken}` } // Add this to all calls
@@ -102,15 +101,14 @@ exports.getRepository = async (req, res) => {
     ).then((response) => { 
       return response;
     }).catch((error) => { 
-      return { data: null }; // Ensure readme is always defined
+      return { data: null };
     }),
     axios.get(`${process.env.GITEA_URL}/api/v1/repos/${owner.username}/${repoName}/collaborators`, {
       headers: { Authorization: `token ${owner.giteaToken}` }
     }).catch(() => ({ data: [] })), 
     
-  ]);
+  ]); 
 
-  // Map Gitea collaborators to include MongoDB user references
 const usernames = collaborators.data.map(c => c.username);
 const users = await User.find({ username: { $in: usernames } });
 const mappedCollaborators = collaborators.data.map(c => {
@@ -121,7 +119,7 @@ const mappedCollaborators = collaborators.data.map(c => {
   };
 });
 
-   //combined data returned
+   
    res.json({
     metadata: repo.toObject(),
     gitData: {
@@ -149,7 +147,7 @@ const mappedCollaborators = collaborators.data.map(c => {
   }
 };
 
-// Fetch User Repositories 
+//User Repositories 
 exports.getUserRepositories = async (req, res) => {
   const userId = new mongoose.Types.ObjectId(req.user._id);
     try {
@@ -172,7 +170,7 @@ exports.getUserRepositories = async (req, res) => {
 
 
   
-//get  contents of repo
+//contents of repo
 exports.getRepoContents = async (req, res) => {
   try {
     const repoId = req.params.repoId;
@@ -192,7 +190,7 @@ exports.getRepoContents = async (req, res) => {
     if (!owner.giteaToken) {
       return res.status(403).json({ error: "Gitea token is required for repository access" });
     }
-    // Proper URL encoding and Gitea API structure
+    
     const encodedPath = path === '' ? '' : encodeURIComponent(path);
     const url = `${process.env.GITEA_URL}/api/v1/repos/${owner.username}/${repo.name}/contents/${encodedPath}?ref=${branch}`;
     console.log("🔗 Fetching Gitea contents from:", url);
@@ -243,10 +241,8 @@ exports.getRecursiveContents = async (req, res) => {
     console.error('Error fetching recursive contents:', error);
     res.status(500).json({ error: 'Failed to fetch recursive contents' });
   }
-};
+}; 
 
-
- // Add to existing exports
  exports.createFile = async (req, res) => {
   let cleanPath;
   let latestCommitSHA;
@@ -257,11 +253,10 @@ exports.getRecursiveContents = async (req, res) => {
     // Validation
     if (!rawPath || content === undefined) {
       return res.status(400).json({ error: "Path and content are required" });
-    }
+    } 
 
-    // Normalize and encode path
     cleanPath = rawPath
-      .replace(/^\/+|\/+$/g, '') // Remove leading/trailing slashes
+      .replace(/^\/+|\/+$/g, '') 
       .split('/')
       .filter(segment => segment.trim() !== '')
       .map(segment => encodeURIComponent(segment))
@@ -270,7 +265,7 @@ exports.getRecursiveContents = async (req, res) => {
     const repo = await Repository.findById(repoId);
     const owner = await User.findById(repo.owner);
     
-    // Get initial branch SHA
+    // Get branch SHA
     let targetBranch = branch;
     try {
       const branchInfo = await axios.get(
@@ -292,7 +287,7 @@ exports.getRecursiveContents = async (req, res) => {
       }
     }
 
-    // Create parent directories recursively
+    // Create directories
     const pathSegments = cleanPath.split('/').slice(0, -1);
     let currentPath = '';
     
@@ -300,7 +295,7 @@ exports.getRecursiveContents = async (req, res) => {
       currentPath = currentPath ? `${currentPath}/${segment}` : segment;
       
       try {
-        // Check if directory exists
+        
         await axios.get(
           `${process.env.GITEA_URL}/api/v1/repos/${encodeURIComponent(owner.username)}/${encodeURIComponent(repo.name)}/contents/${currentPath}?ref=${targetBranch}`,
           { headers: { Authorization: `token ${owner.giteaToken}` }}
@@ -325,7 +320,7 @@ exports.getRecursiveContents = async (req, res) => {
       }
     }
 
-    // Create final file
+    
     const fileResponse = await axios.post(
       `${process.env.GITEA_URL}/api/v1/repos/${encodeURIComponent(owner.username)}/${encodeURIComponent(repo.name)}/contents/${cleanPath}`,
       {
@@ -352,7 +347,7 @@ exports.getRecursiveContents = async (req, res) => {
     });
   }
 };
-// Add to repoController.js
+
 exports.updateFile = async (req, res) => {
   let cleanPath;
   try {
@@ -363,7 +358,7 @@ exports.updateFile = async (req, res) => {
       return res.status(400).json({ error: "Path, content, and SHA are required" });
     }
 
-    // Path sanitization
+    //sanitization
     cleanPath = rawPath
       .replace(/^\/+|\/+$/g, '')
       .split('/')
@@ -380,7 +375,7 @@ exports.updateFile = async (req, res) => {
       content: req.body.content,
       message: message || `Update ${rawPath}`,
       branch: branch,
-      sha: sha // SHA of the file being updated
+      sha: sha
     };
 
     const response = await axios.put(
@@ -451,7 +446,7 @@ exports.createDirectory = async (req, res) => {
     const repoId = req.params.repoId;
     const { path, branch = 'main', message = `Create directory ${path}` } = req.body;
 
-    // Validate inputs
+    
     if (!repoId) return res.status(400).json({ error: "Repository ID required" });
     if (!path) return res.status(400).json({ error: 'Path is required' });
 
@@ -459,22 +454,22 @@ exports.createDirectory = async (req, res) => {
     const owner = await User.findById(repo.owner);
     if (!owner) return res.status(404).json({ error: 'Owner not found' });
 
-    // Encode path segments separately to preserve slashes
+    
     const encodedPath = path.split('/').map(encodeURIComponent).join('/');
     const dummyFilePath = `${encodedPath}/.gitkeep`;
 
-    // Get current branch SHA
+    
     const branchInfo = await axios.get(
       `${process.env.GITEA_URL}/api/v1/repos/${owner.username}/${repo.name}/branches/${branch}`,
       { headers: { Authorization: `token ${owner.giteaToken}` } }
     );
     const latestCommitSHA = branchInfo.data.commit.id;
 
-    // Create directory by adding .gitkeep file
+    
     const response = await axios.post(
       `${process.env.GITEA_URL}/api/v1/repos/${owner.username}/${repo.name}/contents/${dummyFilePath}`,
       {
-        content: Buffer.from("").toString("base64"), // Empty content
+        content: Buffer.from("").toString("base64"), 
         message,
         branch,
         sha: latestCommitSHA
@@ -502,29 +497,29 @@ exports.deleteFile = async (req, res) => {
   try {
     const repoId = req.params.repoId;
     if (!repoId) {
-      console.error("❌ Missing repoId in request");
+      console.error("Missing repoId in request");
       return res.status(400).json({ error: "Repository ID is required to delete file" });
     }
 
     const { path, branch = 'main' } = req.body;
     if (!path) {
-      console.error("❌ Missing file path in request");
+      console.error("Missing file path in request");
       return res.status(400).json({ error: "File path is required to delete" });
     }
 
     const repo = await Repository.findById(repoId);
     if (!repo) {
-      console.error("❌ Repository not found");
+      console.error("Repository not found");
       return res.status(404).json({ error: 'Repository not found' });
     }
 
     const owner = await User.findById(repo.owner);
     if (!owner) {
-      console.error("❌ Repository owner not found");
+      console.error("Repository owner not found");
       return res.status(404).json({ error: 'Repository owner not found' });
     }
 
-    // Get file SHA before deletion
+    
     const fileUrl = `${process.env.GITEA_URL}/api/v1/repos/${owner.username}/${repo.name}/contents/${path}?ref=${branch}`;
     let sha;
     try {
@@ -534,14 +529,14 @@ exports.deleteFile = async (req, res) => {
       sha = fileResponse.data.sha;
     } catch (error) {
       if (error.response?.status === 404) {
-        console.error("❌ File not found, cannot delete:", path);
+        console.error("File not found, cannot delete:", path);
         return res.status(404).json({ error: "File not found" });
       }
-      console.error("❌ Error retrieving file SHA:", error.response?.data || error.message);
+      console.error("Error retrieving file SHA:", error.response?.data || error.message);
       return res.status(500).json({ error: "Error retrieving file details" });
     }
 
-    // Send DELETE request to Gitea API
+    
     const deleteUrl = `${process.env.GITEA_URL}/api/v1/repos/${owner.username}/${repo.name}/contents/${path}`;
     const response = await axios.delete(deleteUrl, {
       headers: {
@@ -557,7 +552,7 @@ exports.deleteFile = async (req, res) => {
 
     res.json({ success: true, message: "File deleted successfully", data: response.data });
   } catch (error) {
-    console.error("❌ File deletion error:", error.response?.data || error.message);
+    console.error("File deletion error:", error.response?.data || error.message);
     res.status(500).json({ error: "Failed to delete file" });
   }
 }; 
@@ -575,7 +570,7 @@ exports.syncCollaborators = async (req, res) => {
     const collaborators = await Promise.all(response.data.map(async c => {
       const user = await User.findOne({ username: c.username });
       return { 
-        user: user ? user._id : null, // Store ObjectId
+        user: user ? user._id : null,
         permission: c.permission 
       };
     }));
@@ -594,7 +589,7 @@ exports.addCollaborator = async (req, res) => {
     const { username, permission } = req.body;
     const repoId = req.params.repoId;
     
-    // Validate inputs
+    
     if (!username || !permission) {
       return res.status(400).json({ error: "Username and permission are required" });
     }
@@ -605,7 +600,7 @@ exports.addCollaborator = async (req, res) => {
     const owner = await User.findById(repo.owner);
     if (!owner) return res.status(404).json({ error: "Owner not found" });
 
-    // Verify user exists in Gitea
+    
     try {
       await axios.get(`${process.env.GITEA_URL}/api/v1/users/${username}`, {
         headers: { Authorization: `token ${owner.giteaToken}` }
@@ -617,14 +612,14 @@ exports.addCollaborator = async (req, res) => {
       throw error;
     }
 
-    // Add collaborator to Gitea
+    
     await axios.put(
       `${process.env.GITEA_URL}/api/v1/repos/${owner.username}/${repo.name}/collaborators/${username}`,
       { permission },
       { headers: { Authorization: `token ${owner.giteaToken}` } }
     );
     
-    // Fetch updated collaborator list from Gitea
+    
     const giteaResponse = await axios.get(
       `${process.env.GITEA_URL}/api/v1/repos/${owner.username}/${repo.name}/collaborators`,
       { headers: { Authorization: `token ${owner.giteaToken}` } }
@@ -637,9 +632,9 @@ exports.addCollaborator = async (req, res) => {
     const mappedCollaborators = collaborators.data.map(c => ({
       user: users.find(u => u.username === c.username)?._id,
       permission,
-    })).filter(c => c.user);  // Filter out collaborators without local users
+    })).filter(c => c.user); 
     
-    // Update repository with synced collaborators
+    
     repo.collaborators = mappedCollaborators;
     await repo.save(); 
     res.json(mappedCollaborators);

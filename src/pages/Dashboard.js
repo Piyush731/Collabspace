@@ -14,6 +14,7 @@ const Dashboard = () => {
   const [repoLoading, setRepoLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const navigate = useNavigate();
+
   useEffect(() => {
     const fetchUserData = async () => {
       try {
@@ -46,9 +47,10 @@ const Dashboard = () => {
         const reposRes = await axios.get(`${API_URL}/api/repos/my-repos`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setRepos(reposRes.data);
+        setRepos(reposRes.data || []);
       } catch (error) {
         console.error("Failed to fetch repositories:", error.message);
+        setRepos([]);
       } finally {
         setRepoLoading(false);
       }
@@ -74,7 +76,7 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen  w-full bg-gradient-to-b from-slate-900 to-slate-800 text-white
+    <div className="min-h-screen w-full bg-gradient-to-b from-slate-900 to-slate-800 text-white
                      w-screen mx-[-20px] mb-[-20px] px-[20px] pb-[20px] overflow-x-hidden">
       <UserNavbar toggleSidebar={toggleSidebar} isSidebarOpen={isSidebarOpen} />
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
@@ -91,9 +93,9 @@ const Dashboard = () => {
             className="bg-gray-800 rounded-xl p-6 shadow-xl mb-8"
           >
             <h1 className="text-3xl font-bold text-white mb-2">
-              Welcome, {user.username}!
+              Welcome, {user?.username || 'User'}!
             </h1>
-            <p className="text-gray-400">{user.email}</p>
+            <p className="text-gray-400">{user?.email || ''}</p>
           </motion.div>
 
           <div className="mb-8 flex justify-between items-center">
@@ -120,7 +122,7 @@ const Dashboard = () => {
                   Loading repositories...
                 </div>
               </motion.div>
-            ) : repos.length === 0 ? (
+            ) : !repos || repos.length === 0 ? (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}

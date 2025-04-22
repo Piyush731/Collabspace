@@ -1,6 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: ["./src/**/*.{js,jsx,ts,tsx}"],
+  darkMode: 'class',
   theme: {
     extend: {
       animation: {
@@ -17,6 +18,13 @@ module.exports = {
           '50%': { transform: 'translateY(-20px)' },
         },
       },
+      colors: {
+        dark: {
+          bg: '#0f172a',
+          surface: '#1e293b',
+          text: '#f8fafc',
+        }
+      }
     },
   },
   plugins: [
@@ -29,6 +37,9 @@ module.exports = {
     'justify-end',
     'bg-blue-600',
     'bg-gray-100',
+    'dark',
+    'dark:bg-dark-bg',
+    'dark:text-dark-text',
     // Add any other dynamic classes you need here
   ],
 };

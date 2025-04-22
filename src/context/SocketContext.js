@@ -7,16 +7,14 @@ const SocketContext = createContext();
 
 export const SocketProvider = ({ children }) => {
   const { user } = useAuth();
-  const [socket, setSocket] = useState(null);
-
-  // Memoized WebSocket connection
+  const [socket, setSocket] = useState(null); 
   const newSocket = useMemo(() => {
     if (!user) return null;
 
     return io(API_URL, {
-      autoConnect: false, // Prevent auto-connection before user is authenticated
+      autoConnect: false,
       auth: { token: localStorage.getItem('token') },
-      transports: ['websocket', 'polling'], // Support fallback transport
+      transports: ['websocket', 'polling'],
       reconnection: true,
     reconnectionAttempts: 5,
     reconnectionDelay: 3000
@@ -24,8 +22,7 @@ export const SocketProvider = ({ children }) => {
   }, [user]);
 
   useEffect(() => {
-    if (!user) {
-      // Disconnect socket if user logs out
+    if (!user) { 
       if (socket) {
         socket.disconnect();
         setSocket(null);
@@ -48,9 +45,7 @@ export const SocketProvider = ({ children }) => {
       {children}
     </SocketContext.Provider>
   );
-};
-
-// Custom hook for consuming the socket
+}; 
 export const useSocket = () => {
   return useContext(SocketContext);
 };
