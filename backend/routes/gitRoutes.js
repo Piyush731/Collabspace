@@ -20,4 +20,16 @@ router.post('/:repoId/resolve-conflict', gitController.resolveConflict);
 router.post('/:repoId/commit', gitController.commitChanges);
 router.post('/:repoId/push', gitController.pushChanges);
 
+// Delete branch (branch name may contain slashes)
+router.delete('/:repoId/branches/:branch(*)', gitController.deleteBranch);
+// Also PATCH delete route supports wildcard
+router.patch('/:repoId/branches/:branch(*)', gitController.deleteBranch);
+
+// Pull Request operations
+router.get('/:repoId/pulls', gitController.listPulls);
+router.post('/:repoId/pulls', gitController.createPull);
+router.get('/:repoId/pulls/:prNumber/conflicts', gitController.getPullConflicts);
+router.delete('/:repoId/pulls/:prNumber', gitController.deletePull);
+router.patch('/:repoId/pulls/:prNumber', gitController.deletePull);
+
 module.exports = router; 

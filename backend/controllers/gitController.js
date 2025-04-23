@@ -2,6 +2,9 @@ const simpleGit = require('simple-git');
 const path = require('path');
 const fs = require('fs');
 const Repository = require('../models/Repository');
+const User = require('../models/User');
+const axios = require('axios');
+const GITEA_URL = process.env.GITEA_URL;
 
 // Define base directory for local repos, with fallback when deploying
 const REPOS_DIR = process.env.REPOS_DIR || path.join(__dirname, '../repos');
@@ -12,6 +15,21 @@ if (!fs.existsSync(REPOS_DIR)) {
 
 // Initialize Git instance
 const git = simpleGit();
+
+// Simple lock helper to prevent concurrent operations on the same repository
+async function withRepoLock(repoId, operation, fn) {
+  const repoPath = path.join(REPOS_DIR, repoId);
+  const lockFile = path.join(repoPath, `.${operation}.lock`);
+  if (fs.existsSync(lockFile)) {
+    throw new Error(`${operation} already in progress`);
+  }
+  fs.writeFileSync(lockFile, `${Date.now()}`, 'utf8');
+  try {
+    return await fn();
+  } finally {
+    try { fs.unlinkSync(lockFile); } catch {}
+  }
+}
 
 // Helper to clone a repo locally if missing and return a repo-specific simple-git instance
 async function ensureLocalRepoInstance(repoId) {
@@ -36,6 +54,12 @@ async function ensureLocalRepoInstance(repoId) {
       // e.g. https://username:token@gitea.example.com/user/repo.git
       const authUrl = cloneUrl.replace(/^(https?:\/\/)/, `$1${username}:${token}@`);
       await gitRepo.remote(['set-url', 'origin', authUrl]);
+      // Validate token by performing a fetch, catching auth errors
+      try {
+        await gitRepo.fetch(['--quiet']);
+      } catch (authErr) {
+        throw new Error('Authentication failed: invalid or expired token');
+      }
     } catch (err) {
       console.error('Could not reset remote origin URL:', err.message);
     }
@@ -94,51 +118,40 @@ exports.switchBranch = async (req, res) => {
   }
 };
 
-// Merge branches
+// Merge branches: reset target to remote, merge origin/source, detect conflicts, then push
 exports.mergeBranches = async (req, res) => {
+  const { repoId } = req.params;
+  const { source, target } = req.body;
+  // Prevent concurrent merges
   try {
-    const { repoId } = req.params;
-    const { source, target } = req.body;
+    await withRepoLock(repoId, 'merge', async () => {});
+  } catch (lockErr) {
+    console.error('mergeBranches lock error:', lockErr.message);
+    return res.status(409).json({ error: lockErr.message });
+  }
+  try {
     const gitRepo = await ensureLocalRepoInstance(repoId);
-
-    // Switch to target branch
+    // 1) Reset local target branch to remote to avoid missing files
+    await gitRepo.fetch('origin', target);
     await gitRepo.checkout(target);
-    try {
-      // Fetch & pull the latest target from origin to avoid non‑fast‑forward
-      await gitRepo.fetch('origin', target);
-      await gitRepo.pull('origin', target);
-    } catch (syncErr) {
-      console.warn('Could not sync target branch:', syncErr.message);
-    }
-    // Update remote-tracking references
-    await gitRepo.fetch();
+    await gitRepo.reset(['--hard', `origin/${target}`]);
 
-    // Attempt fast-forward merge from remote
+    // 2) Fetch source updates and merge into target
+    await gitRepo.fetch('origin', source);
     try {
-      await gitRepo.merge(['--ff-only', `origin/${source}`]);
-      // Push the fast-forwarded branch to remote
-      await gitRepo.push('origin', target);
-      return res.json({ message: 'Fast-forward merge completed and pushed', hasConflicts: false });
-    } catch (ffErr) {
-      // Attempt recursive merge from remote
-      try {
-        await gitRepo.merge([`origin/${source}`]);
-        // Push the merge commit to remote
-        await gitRepo.push('origin', target);
-        return res.json({ message: 'Recursive merge completed and pushed', hasConflicts: false });
-      } catch (mergeErr) {
-        // Check for conflicts
-        const status = await gitRepo.status();
-        if (status.conflicted.length > 0) {
-          return res.json({
-            message: 'Merge conflicts detected',
-            hasConflicts: true,
-            conflicts: status.conflicted
-          });
-        }
-        throw mergeErr;
+      await gitRepo.merge(['--no-ff', `origin/${source}`]);
+    } catch (mergeErr) {
+      const status = await gitRepo.status();
+      if (status.conflicted.length > 0) {
+        console.error('mergeBranches conflicts:', status.conflicted);
+        return res.json({ message: 'Merge conflicts detected', hasConflicts: true, conflicts: status.conflicted });
       }
+      throw mergeErr;
     }
+
+    // 3) Push merged target
+    await gitRepo.push('origin', target);
+    return res.json({ message: 'Merge completed and pushed', hasConflicts: false });
   } catch (error) {
     console.error('mergeBranches error:', error);
     res.status(500).json({ error: 'Failed to merge branches', details: error.message });
@@ -149,54 +162,57 @@ exports.mergeBranches = async (req, res) => {
 exports.getConflicts = async (req, res) => {
   try {
     const { repoId } = req.params;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
     const gitRepo = await ensureLocalRepoInstance(repoId);
     const status = await gitRepo.status();
-    const conflicts = await Promise.all(
-      status.conflicted.map(async (filePath) => {
+    const total = status.conflicted.length;
+    const start = (page - 1) * limit;
+    const slice = status.conflicted.slice(start, start + limit);
+    const conflicts = [];
+    const batchSize = 5;
+    for (let i = 0; i < slice.length; i += batchSize) {
+      const batch = slice.slice(i, i + batchSize);
+      const batchResults = await Promise.all(batch.map(async (filePath) => {
         const repoPath = path.join(REPOS_DIR, repoId);
-        // Base (pre-merge) content
         const baseContent = await gitRepo.show([`HEAD:${filePath}`]);
-        // Current working copy with conflict markers
-        const currentContent = await fs.promises.readFile(
-          path.join(repoPath, filePath), 'utf8'
-        );
-        // Incoming changes from MERGE_HEAD
+        const currentContent = await fs.promises.readFile(path.join(repoPath, filePath), 'utf8');
         const incomingContent = await gitRepo.show([`MERGE_HEAD:${filePath}`]);
         return { filePath, baseContent, currentContent, incomingContent };
-      })
-    );
-    res.json(conflicts);
+      }));
+      conflicts.push(...batchResults);
+    }
+    res.json({ total, page, limit, conflicts });
   } catch (error) {
-    console.error('getConflicts error:', error.message);
-    res.status(500).json({ error: 'Failed to fetch conflicts' });
+    console.error('getConflicts error:', error);
+    res.status(500).json({ error: 'Failed to fetch conflicts', details: error.message });
   }
 };
 
 // Resolve conflict
 exports.resolveConflict = async (req, res) => {
+  // Prevent concurrent conflict resolution
   try {
     const { repoId } = req.params;
-    const { filePath, resolution } = req.body;
-    const gitRepo = await ensureLocalRepoInstance(repoId);
-    if (resolution === 'ours') {
-      await gitRepo.checkout(['--ours', filePath]);
-    } else {
-      await gitRepo.checkout(['--theirs', filePath]);
-    }
-    
-    // Add the resolved file
-    await gitRepo.add(filePath);
-    
-    // Check if all conflicts are resolved
-    const status = await gitRepo.status();
-    if (status.conflicted.length === 0) {
-      // Continue the merge
-      await gitRepo.commit('Resolved merge conflicts');
-    }
-    
-    res.json({ message: 'Conflict resolved successfully' });
+    await withRepoLock(repoId, 'resolve', async () => {
+      const { filePath, resolution } = req.body;
+      const gitRepo = await ensureLocalRepoInstance(repoId);
+      if (resolution === 'ours') {
+        await gitRepo.checkout(['--ours', filePath]);
+      } else {
+        await gitRepo.checkout(['--theirs', filePath]);
+      }
+      await gitRepo.add(filePath);
+      const status = await gitRepo.status();
+      if (status.conflicted.length === 0) {
+        await gitRepo.commit('Resolved merge conflicts');
+      }
+      res.json({ message: 'Conflict resolved successfully' });
+    });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to resolve conflict' });
+    console.error('resolveConflict error:', error);
+    const statusCode = error.message.includes('in progress') ? 409 : 500;
+    res.status(statusCode).json({ error: 'Failed to resolve conflict', details: error.message });
   }
 };
 
@@ -227,5 +243,137 @@ exports.pushChanges = async (req, res) => {
   } catch (error) {
     console.error('pushChanges error:', error);
     res.status(500).json({ error: 'Failed to push changes' });
+  }
+};
+
+// List Pull Requests for a repo via Gitea API
+exports.listPulls = async (req, res) => {
+  try {
+    const { repoId } = req.params;
+    const repo = await Repository.findById(repoId);
+    if (!repo) return res.status(404).json({ error: 'Repository not found' });
+    const owner = await User.findById(repo.owner);
+    if (!owner?.giteaToken) return res.status(403).json({ error: 'Gitea token missing' });
+    // Fetch all PRs (open and closed)
+    const url = `${GITEA_URL}/api/v1/repos/${encodeURIComponent(owner.username)}/${encodeURIComponent(repo.name)}/pulls?state=all`;
+    const response = await axios.get(url, { headers: { Authorization: `token ${owner.giteaToken}` } });
+    res.json(response.data);
+  } catch (error) {
+    console.error('listPulls error:', error.response?.data || error.message);
+    res.status(500).json({ error: 'Failed to list pull requests' });
+  }
+};
+
+// Create a new Pull Request via Gitea API
+exports.createPull = async (req, res) => {
+  try {
+    const { repoId } = req.params;
+    const { head, base, title, body } = req.body;
+    const repo = await Repository.findById(repoId);
+    if (!repo) return res.status(404).json({ error: 'Repository not found' });
+    const owner = await User.findById(repo.owner);
+    if (!owner?.giteaToken) return res.status(403).json({ error: 'Gitea token missing' });
+    const url = `${GITEA_URL}/api/v1/repos/${encodeURIComponent(owner.username)}/${encodeURIComponent(repo.name)}/pulls`;
+    const response = await axios.post(
+      url,
+      { head, base, title, body },
+      { headers: { Authorization: `token ${owner.giteaToken}` } }
+    );
+    res.status(201).json(response.data);
+  } catch (error) {
+    console.error('createPull error:', error.response?.data || error.message);
+    res.status(500).json({ error: 'Failed to create pull request' });
+  }
+};
+
+// Get conflicts for a specific Pull Request
+exports.getPullConflicts = async (req, res) => {
+  try {
+    const { repoId, prNumber } = req.params;
+    const repo = await Repository.findById(repoId);
+    if (!repo) return res.status(404).json({ error: 'Repository not found' });
+    const owner = await User.findById(repo.owner);
+    if (!owner?.giteaToken) return res.status(403).json({ error: 'Gitea token missing' });
+    // Fetch PR metadata
+    const prUrl = `${GITEA_URL}/api/v1/repos/${encodeURIComponent(owner.username)}/${encodeURIComponent(repo.name)}/pulls/${prNumber}`;
+    const prRes = await axios.get(prUrl, { headers: { Authorization: `token ${owner.giteaToken}` } });
+    const head = prRes.data.head.ref;
+    const base = prRes.data.base.ref;
+    // Merge locally to find conflicts
+    const gitRepo = await ensureLocalRepoInstance(repoId);
+    await gitRepo.checkout(base);
+    try {
+      await gitRepo.merge(['--no-commit', '--no-ff', head]);
+    } catch (_) {
+      // ignore merge errors
+    }
+    const status = await gitRepo.status();
+    const conflicts = await Promise.all(
+      status.conflicted.map(async (filePath) => {
+        const repoPath = path.join(REPOS_DIR, repoId);
+        const baseContent = await gitRepo.show([`HEAD:${filePath}`]);
+        const currentContent = await fs.promises.readFile(path.join(repoPath, filePath), 'utf8');
+        const incomingContent = await gitRepo.show([`MERGE_HEAD:${filePath}`]);
+        return { filePath, baseContent, currentContent, incomingContent };
+      })
+    );
+    // Abort merge
+    try { await gitRepo.merge(['--abort']); } catch (_) {}
+    res.json(conflicts);
+  } catch (error) {
+    console.error('getPullConflicts error:', error.response?.data || error.message);
+    res.status(500).json({ error: 'Failed to fetch pull request conflicts' });
+  }
+};
+
+// Close a pull request instead of DELETE (Gitea requires PATCH to change state)
+exports.deletePull = async (req, res) => {
+  try {
+    const { repoId, prNumber } = req.params;
+    const repo = await Repository.findById(repoId);
+    if (!repo) return res.status(404).json({ error: 'Repository not found' });
+    const owner = await User.findById(repo.owner);
+    if (!owner?.giteaToken) return res.status(403).json({ error: 'Gitea token missing' });
+    const url = `${GITEA_URL}/api/v1/repos/${encodeURIComponent(owner.username)}/${encodeURIComponent(repo.name)}/pulls/${prNumber}`;
+    // Patch to set state to closed
+    await axios.patch(
+      url,
+      { state: 'closed' },
+      { headers: { Authorization: `token ${owner.giteaToken}` } }
+    );
+    res.json({ message: 'Pull request closed successfully' });
+  } catch (error) {
+    console.error('closePull error:', error.response?.data || error.message);
+    res.status(500).json({ error: 'Failed to close pull request' });
+  }
+};
+
+// Delete a branch: try local+remote git deletion first, then fallback to Gitea API
+exports.deleteBranch = async (req, res) => {
+  const { repoId } = req.params;
+  const branch = req.params.branch || req.query.branch;
+  try {
+    const gitRepo = await ensureLocalRepoInstance(repoId);
+    // Delete local branch
+    await gitRepo.deleteLocalBranch(branch, true);
+    // Delete remote branch via git
+    await gitRepo.push(['origin', '--delete', branch]);
+    return res.json({ message: 'Branch deleted via git successfully' });
+  } catch (gitErr) {
+    console.warn('Git branch deletion failed, attempting Gitea API:', gitErr.message);
+    // Fallback to Gitea API
+    try {
+      const repo = await Repository.findById(repoId);
+      if (!repo) return res.status(404).json({ error: 'Repository not found' });
+      const owner = await User.findById(repo.owner);
+      if (!owner?.giteaToken) return res.status(403).json({ error: 'Gitea token missing' });
+      const url = `${GITEA_URL}/api/v1/repos/${encodeURIComponent(owner.username)}/${encodeURIComponent(repo.name)}/branches/${encodeURIComponent(branch)}`;
+      await axios.delete(url, { headers: { Authorization: `token ${owner.giteaToken}` } });
+      return res.json({ message: 'Branch deleted via Gitea API successfully' });
+    } catch (apiErr) {
+      console.error('deleteBranch error:', apiErr.response?.data || apiErr.message);
+      const msg = apiErr.response?.data?.message || 'Failed to delete branch';
+      return res.status(500).json({ error: msg });
+    }
   }
 }; 

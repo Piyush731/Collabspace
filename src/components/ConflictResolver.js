@@ -1,17 +1,32 @@
 import React, { useState } from 'react';
 import { DiffEditor } from '@monaco-editor/react';
+import { FiX } from 'react-icons/fi';
 import api from '../utils/api';
 import { toast } from 'react-hot-toast';
 
-const ConflictResolver = ({ repoId, conflicts, onAllResolved }) => {
+const ConflictResolver = ({ repoId, conflicts, onAllResolved, onClose }) => {
   const [index, setIndex] = useState(0);
   const [resolvedFiles, setResolvedFiles] = useState([]);
   // Guards after initializing hooks
   if (!conflicts || conflicts.length === 0) {
-    return <div className="p-4 text-center text-gray-500">No merge conflicts to resolve.</div>;
+    return (
+      <div className="relative p-4 text-center text-gray-500">
+        <button onClick={onClose} className="absolute top-0 right-0 p-2 text-gray-400 hover:text-gray-600">
+          <FiX />
+        </button>
+        No merge conflicts to resolve.
+      </div>
+    );
   }
   if (index >= conflicts.length) {
-    return <div className="p-4 text-center text-gray-500">All conflicts have been processed.</div>;
+    return (
+      <div className="relative p-4 text-center text-gray-500">
+        <button onClick={onClose} className="absolute top-0 right-0 p-2 text-gray-400 hover:text-gray-600">
+          <FiX />
+        </button>
+        All conflicts have been processed.
+      </div>
+    );
   }
   const currentConflict = conflicts[index];
 
@@ -36,7 +51,10 @@ const ConflictResolver = ({ repoId, conflicts, onAllResolved }) => {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="relative space-y-4">
+      <button onClick={onClose} className="absolute top-0 right-0 p-2 text-gray-400 hover:text-gray-600">
+        <FiX />
+      </button>
       <h3 className="text-lg font-semibold">Resolving: {currentConflict.filePath}</h3>
       <div className="bg-white dark:bg-slate-800 p-4 rounded">        
         <DiffEditor

@@ -1,35 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { FiGitBranch, FiGitMerge, FiAlertTriangle } from 'react-icons/fi';
+import { FiGitBranch, FiGitMerge, FiAlertTriangle, FiGitPullRequest } from 'react-icons/fi';
 import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
-import axios from 'axios';
-import API_URL from '../config';
+import api from '../utils/api';
 import ConflictResolver from './ConflictResolver';
 
-// Create axios instance with base URL
-const api = axios.create({ baseURL: API_URL });
-
-// Automatically include the auth token in all requests
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
-const GitOperations = ({ repoId, onBranchChange }) => {
+const GitOperations = ({ repoId, onBranchChange, onMergeComplete, onConflictList, onPRCreated }) => {
   const [branches, setBranches] = useState([]);
   const [currentBranch, setCurrentBranch] = useState('main');
   const [conflicts, setConflicts] = useState([]);
   const [allResolvedFiles, setAllResolvedFiles] = useState([]);
   const [commitMessage, setCommitMessage] = useState('');
+  const [prHead, setPrHead] = useState('');
+  const [prBase, setPrBase] = useState('');
+  const [prTitle, setPrTitle] = useState('');
   const [isCommitting, setIsCommitting] = useState(false);
   const [isPushing, setIsPushing] = useState(false);
   const [isMerging, setIsMerging] = useState(false);
+  const [isAutoResolving, setIsAutoResolving] = useState(false);
+  const [showConflictPanel, setShowConflictPanel] = useState(true);
   const [mergeSource, setMergeSource] = useState('');
   const [mergeTarget, setMergeTarget] = useState('');
 
@@ -38,27 +27,52 @@ const GitOperations = ({ repoId, onBranchChange }) => {
     fetchConflicts();
   }, [repoId]);
 
+  useEffect(() => {
+    if (conflicts.length > 0) {
+      setShowConflictPanel(true);
+    }
+  }, [conflicts]);
+
+  const createPullRequest = async () => {
+    if (!prHead || !prBase || !prTitle) {
+      return toast.error('Select head, base and title for PR');
+    }
+    try {
+      const res = await api.post(`/repos/${repoId}/pulls`, { head: prHead, base: prBase, title: prTitle, body: '' });
+      toast.success(`PR #${res.data.number} created`);
+      if (onPRCreated) onPRCreated(res.data);
+      const conflictRes = await api.get(`/repos/${repoId}/pulls/${res.data.number}/conflicts`);
+      if (onConflictList) onConflictList(conflictRes.data);
+    } catch (error) {
+      toast.error('Failed to create PR');
+    }
+  };
+
   const fetchBranches = async () => {
     try {
-      const response = await api.get(`/api/repos/${repoId}/branches`);
+      const response = await api.get(`/repos/${repoId}/branches`);
       setBranches(response.data);
+      setPrHead(response.data[0] || '');
+      setPrBase(currentBranch);
     } catch (error) {
       toast.error('Failed to fetch branches');
     }
   };
 
-  const fetchConflicts = async () => {
+  const fetchConflicts = async ({ page=1, limit=50 }={}) => {
     try {
-      const response = await api.get(`/api/repos/${repoId}/conflicts`);
-      setConflicts(response.data);
+      const response = await api.get(`/repos/${repoId}/conflicts?page=${page}&limit=${limit}`);
+      return response.data;
     } catch (error) {
-      toast.error('Failed to fetch conflicts');
+      console.error('fetchConflicts frontend error:', error.response?.data || error.message);
+      toast.error(`Failed to load conflicts: ${error.response?.data?.details || error.message}`);
+      return { total:0, conflicts:[] };
     }
   };
 
   const createBranch = async (branchName) => {
     try {
-      await api.post(`/api/repos/${repoId}/branches`, { name: branchName });
+      await api.post(`/repos/${repoId}/branches`, { name: branchName });
       toast.success(`Branch ${branchName} created successfully`);
       fetchBranches();
     } catch (error) {
@@ -68,7 +82,7 @@ const GitOperations = ({ repoId, onBranchChange }) => {
 
   const switchBranch = async (branchName) => {
     try {
-      await api.post(`/api/repos/${repoId}/switch-branch`, { branch: branchName });
+      await api.post(`/repos/${repoId}/switch-branch`, { branch: branchName });
       setCurrentBranch(branchName);
       onBranchChange(branchName);
       toast.success(`Switched to branch ${branchName}`);
@@ -85,31 +99,40 @@ const GitOperations = ({ repoId, onBranchChange }) => {
 
     setIsMerging(true);
     try {
-      const response = await api.post(`/api/repos/${repoId}/merge`, {
-        source: mergeSource,
-        target: mergeTarget
-      });
+      const response = await api.post(
+        `/repos/${repoId}/merge`,
+        { source: mergeSource, target: mergeTarget },
+        { timeout: 120000 }
+      );
 
       if (response.data.hasConflicts) {
         toast.error('Merge conflicts detected');
-        fetchConflicts();
+        // fetch conflicts with pagination
+        const confRes = await fetchConflicts({ page:1, limit:50 });
+        const conflictsData = confRes.conflicts || [];
+        setConflicts(conflictsData);
         setAllResolvedFiles([]);
+        console.error('Merge conflicts details:', conflictsData);
       } else {
         toast.success('Merge completed successfully');
         setCurrentBranch(mergeTarget);
         onBranchChange(mergeTarget);
-        fetchBranches();
-        fetchConflicts();
+        await fetchBranches();
+        await fetchConflicts();
+        if (onMergeComplete) onMergeComplete();
       }
     } catch (error) {
-      toast.error('Failed to merge branches');
+      console.error('mergeBranches frontend error:', error.response?.data || error.message);
+      const msg = error.response?.data?.details || error.message;
+      toast.error(`Merge failed: ${msg}`);
+    } finally {
+      setIsMerging(false);
     }
-    setIsMerging(false);
   };
 
   const resolveConflict = async (filePath, resolution) => {
     try {
-      await api.post(`/api/repos/${repoId}/resolve-conflict`, {
+      await api.post(`/repos/${repoId}/resolve-conflict`, {
         filePath,
         resolution
       });
@@ -127,7 +150,7 @@ const GitOperations = ({ repoId, onBranchChange }) => {
   const handleCommit = async () => {
     setIsCommitting(true);
     try {
-      await api.post(`/api/repos/${repoId}/commit`, {
+      await api.post(`/repos/${repoId}/commit`, {
         branch: mergeTarget,
         message: commitMessage || `Fixed merge conflicts in ${allResolvedFiles.join(', ')}`
       });
@@ -142,7 +165,7 @@ const GitOperations = ({ repoId, onBranchChange }) => {
   const handlePush = async () => {
     setIsPushing(true);
     try {
-      await api.post(`/api/repos/${repoId}/push`, { branch: mergeTarget });
+      await api.post(`/repos/${repoId}/push`, { branch: mergeTarget });
       toast.success('Pushed changes successfully');
       fetchBranches();
       fetchConflicts();
@@ -155,8 +178,73 @@ const GitOperations = ({ repoId, onBranchChange }) => {
     }
   };
 
+  const handleAutoResolve = async (choice) => {
+    setIsAutoResolving(true);
+    const resolved = [];
+    const batchSize = 5;
+    try {
+      for (let i = 0; i < conflicts.length; i += batchSize) {
+        const batch = conflicts.slice(i, i + batchSize);
+        for (const c of batch) {
+          try {
+            const res = await api.post(`/repos/${repoId}/resolve-conflict`, { filePath: c.filePath, resolution: choice });
+            resolved.push(c.filePath);
+          } catch (err) {
+            console.error('Auto resolve error for', c.filePath, err.response?.data || err.message);
+            toast.error(`Failed to resolve ${c.filePath}: ${err.response?.data?.details || err.message}`);
+          }
+        }
+      }
+      setAllResolvedFiles(resolved);
+      toast.success(`Auto-resolved ${resolved.length} conflicts (${choice})`);
+      // Refresh remaining conflicts
+      const rem = await fetchConflicts({ page:1, limit:50 });
+      setConflicts(rem.conflicts || []);
+    } catch (e) {
+      console.error('handleAutoResolve error:', e);
+    } finally {
+      setIsAutoResolving(false);
+    }
+  };
+
   return (
     <div className="bg-slate-800 rounded-lg p-6 space-y-6 h-full flex flex-col overflow-auto">
+      {/* Pull Request Management */}
+      <div className="space-y-4">
+        <h3 className="text-xl font-semibold flex items-center gap-2 text-indigo-400">
+          <FiGitPullRequest /> Pull Requests
+        </h3>
+        <div className="flex gap-4">
+          <select
+            value={prHead}
+            onChange={(e) => setPrHead(e.target.value)}
+            className="bg-slate-700 text-white rounded-lg px-4 py-2"
+          >
+            {branches.map(b => <option key={b} value={b}>{b}</option>)}
+          </select>
+          <select
+            value={prBase}
+            onChange={(e) => setPrBase(e.target.value)}
+            className="bg-slate-700 text-white rounded-lg px-4 py-2"
+          >
+            {branches.map(b => <option key={b} value={b}>{b}</option>)}
+          </select>
+          <input
+            type="text"
+            placeholder="PR title"
+            value={prTitle}
+            onChange={(e) => setPrTitle(e.target.value)}
+            className="bg-slate-700 text-white rounded-lg px-4 py-2 flex-grow"
+          />
+          <button
+            onClick={createPullRequest}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg"
+          >
+            Create PR
+          </button>
+        </div>
+      </div>
+
       {/* Branch Management */}
       <div className="space-y-4">
         <h3 className="text-xl font-semibold flex items-center gap-2">
@@ -234,16 +322,33 @@ const GitOperations = ({ repoId, onBranchChange }) => {
       </div>
 
       {/* Conflict Resolution and Commit Panel */}
-      {conflicts.length > 0 && allResolvedFiles.length < conflicts.length && (
+      {conflicts.length > 0 && allResolvedFiles.length < conflicts.length && showConflictPanel && (
         <div className="space-y-4">
           <h3 className="text-xl font-semibold flex items-center gap-2 text-red-400">
             <FiAlertTriangle />
             Merge Conflicts
           </h3>
+          <div className="flex gap-4">
+            <button
+              onClick={() => handleAutoResolve('ours')}
+              disabled={isAutoResolving}
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded disabled:opacity-50"
+            >
+              {isAutoResolving ? 'Resolving...' : 'Auto Resolve (Ours)'}
+            </button>
+            <button
+              onClick={() => handleAutoResolve('theirs')}
+              disabled={isAutoResolving}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded disabled:opacity-50"
+            >
+              {isAutoResolving ? 'Resolving...' : 'Auto Resolve (Theirs)'}
+            </button>
+          </div>
           <ConflictResolver
             repoId={repoId}
             conflicts={conflicts}
             onAllResolved={handleAllResolved}
+            onClose={() => setShowConflictPanel(false)}
           />
         </div>
       )}

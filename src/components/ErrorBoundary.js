@@ -1,26 +1,28 @@
 // components/ErrorBoundary.js
 import React from 'react';
 
-class ErrorBoundary extends React.Component {
+export default class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { hasError: false, error: null };
   }
 
   static getDerivedStateFromError(error) {
-    return { hasError: true };
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, info) {
+    console.error('ErrorBoundary caught an error:', error, info);
   }
 
   render() {
     if (this.state.hasError) {
       return (
-        <div className="p-4 bg-red-100 text-red-700">
-          Something went wrong. Please try refreshing the page.
+        <div className="p-4 text-center text-red-500">
+          Oops! Something went wrong in the merge UI. Please try again.
         </div>
       );
     }
     return this.props.children;
   }
 }
-
-export default ErrorBoundary;

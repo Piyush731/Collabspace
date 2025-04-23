@@ -16,8 +16,11 @@ import LoadingRepository from '../components/LoadingRepository';
 import API_URL from "../config";
 import ChatModal from '../components/Chat';
 import AddCollaboratorModal from '../components/AddCollaboratorModal';
-import { FiGitBranch, FiGitMerge, FiGitCommit } from 'react-icons/fi';
+import { FiGitBranch, FiGitMerge, FiGitCommit, FiX } from 'react-icons/fi';
 import GitOperations from '../components/GitOperations';
+import ErrorBoundary from '../components/ErrorBoundary';
+import api from '../utils/api';
+import ConflictResolver from '../components/ConflictResolver';
 
 // Animation configurations
 const containerVariants = {
@@ -94,6 +97,7 @@ const [isFileLoading, setIsFileLoading] = useState(false);
 const [selectedDirectory, setSelectedDirectory] = useState('');
 const [issues, setIssues] = useState([]);
 const [prs, setPrs] = useState([]);
+const [prConflicts, setPrConflicts] = useState([]);
 const [readmeContent, setReadmeContent] = useState('');
 const [stats, setStats] = useState({ stars: 0, forks: 0, issues: 0 }); 
 const tabsContentRef = useRef(null);
@@ -107,10 +111,12 @@ const [selectedCode, setSelectedCode] = useState('');
 const [codeMarkers, setCodeMarkers] = useState([]);
 const [jiraIssues, setJiraIssues] = useState([]);
 const [isRepoDataLoading, setIsRepoDataLoading] = useState(true);
+const [selectedPr, setSelectedPr] = useState(null);
+const [isPrMerging, setIsPrMerging] = useState(false);
+const [mergingPrId, setMergingPrId] = useState(null);
 
-
-
-
+// derive list of open PRs for the Issues tab
+const openPrs = prs.filter(pr => pr.state === 'open');
 
 // Add these functions before the return statement
 const handleCodeSelection = (selection) => {
@@ -218,6 +224,20 @@ useEffect(() => {
 
     if (user) fetchRepoData();
   }, [repoId, user, navigate]);
+
+  // Fetch PR-specific conflicts when a PR is selected
+  useEffect(() => {
+    if (selectedPr) {
+      (async () => {
+        try {
+          const res = await api.get(`/repos/${repoId}/pulls/${selectedPr}/conflicts`);
+          setPrConflicts(res.data);
+        } catch (err) {
+          toast.error('Failed to load PR conflicts');
+        }
+      })();
+    }
+  }, [selectedPr, repoId]);
 
   
   // directory fetching function
@@ -611,6 +631,25 @@ const handleCreateBranch = async () => {
   }
 };
 
+// Handler to delete a branch locally and remotely
+const handleDeleteBranch = async (branchName) => {
+  if (!window.confirm(`Delete branch ${branchName}?`)) return;
+  try {
+    await api.delete(`/repos/${repoId}/branches/${encodeURIComponent(branchName)}`);
+    toast.success(`Branch ${branchName} deleted`);
+    // update local list
+    setBranches(prev => prev.filter(b => (typeof b === 'string' ? b : b.name) !== branchName));
+    // if deleted branch is active, switch to default
+    if (activeBranch === branchName && branches.length > 0) {
+      const next = branches.find(b => ((typeof b === 'string' ? b : b.name) !== branchName));
+      if (next) handleBranchChange(typeof next === 'string' ? next : next.name);
+    }
+  } catch (error) {
+    console.error('Delete branch error:', error.response?.data || error.message);
+    toast.error('Failed to delete branch');
+  }
+};
+
 //below is tabs UI functions//MOCK DATA TETSING UI
   const [files] = useState([   
     { name: 'index.js', path: 'src/index.js', content: 'console.log("Hello World");' },
@@ -698,6 +737,55 @@ const handleRepositoryAction = (action) => {
       </div>
     );
 
+    // Handler to merge a pull request
+    const handleMergePR = async (pr) => {
+      setIsPrMerging(true);
+      setMergingPrId(pr.number);
+      try {
+        const response = await api.post(`/repos/${repoId}/merge`, {
+          source: pr.head.ref,
+          target: pr.base.ref
+        });
+        if (response.data.hasConflicts) {
+          toast.error('Merge conflicts detected');
+          setSelectedPr(pr.number);
+          const conflictRes = await api.get(`/repos/${repoId}/pulls/${pr.number}/conflicts`);
+          setPrConflicts(conflictRes.data);
+        } else {
+          toast.success('PR merged successfully');
+          setSelectedPr(null);
+          // refresh branches
+          const branchesRes = await api.get(`/repos/${repoId}/branches`);
+          setBranches(branchesRes.data);
+          // reload open PRs from server
+          const prsRes = await api.get(`/repos/${repoId}/pulls`);
+          setPrs(prsRes.data);
+        }
+      } catch (error) {
+        toast.error('Failed to merge PR');
+      } finally {
+        setIsPrMerging(false);
+        setMergingPrId(null);
+      }
+    };
+
+    // Handler to delete (close) a pull request
+    const handleDeletePR = async (pr) => {
+      if (!window.confirm(`Close PR #${pr.number}?`)) return;
+      try {
+        // Use PATCH to close the PR (DELETE is not allowed by Gitea)
+        await api.patch(`/repos/${repoId}/pulls/${pr.number}`);
+        toast.success(`PR #${pr.number} closed`);
+        // Refresh PR list to pick up closed state
+        const prsRes = await api.get(`/repos/${repoId}/pulls`);
+        setPrs(prsRes.data);
+        if (selectedPr === pr.number) setSelectedPr(null);
+      } catch (error) {
+        console.error('handleDeletePR error:', error.response?.data || error.message);
+        toast.error('Failed to close PR');
+      }
+    };
+
     if (!repoData) return <LoadingRepository />;
 
     return (
@@ -735,10 +823,11 @@ const handleRepositoryAction = (action) => {
                 >
                   {repoData.visibility === 'private' ? '🔒 Private' : '🌍 Public'}
                 </motion.span>
-                <BranchSelector 
-                  branches={branches} 
+                <BranchSelector
+                  branches={branches}
                   activeBranch={activeBranch}
                   onChange={handleBranchChange}
+                  onDelete={handleDeleteBranch}
                 />
                 <button onClick={handleCreateBranch} className="ml-4 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded-lg transition">
                   Add Branch
@@ -970,61 +1059,101 @@ const handleRepositoryAction = (action) => {
                   </TabPanel>
                 )}
 
-                {/* issues */}
-                <TabPanel className="h-full flex flex-col mt-2">
-                <div className="bg-gray-50 flex flex-col flex-1 overflow-y-auto min-h-0">
-              <h2 className="text-2xl font-bold mb-4 text-black">Issues ({issues.length})</h2>
-             <div className="p-3 space-y-3">
-             {issues.map(issue => (
-            <div key={issue.id} className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow text-black">
-              <div className="flex items-start gap-3">
-                <span className={`px-2 py-1 rounded-full text-sm ${
-                  issue.state === 'open' 
-                    ? 'bg-green-100 text-green-800' 
-                    : 'bg-gray-100 text-gray-600'
-                }`}>
-                  {issue.state}
-                </span>
-                <h3 className="font-semibold text-black">{issue.title}</h3>
-              </div>
-              <p className="text-gray-700 text-sm">{issue.body?.substring(0, 150)}...</p>
-            </div>
-          ))}
-          {issues.length === 0 && (
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 text-center text-black">
-              <p className="text-gray-700 h-full">No open issues ✨</p>
-            </div>
-          )}
-        </div>
-      </div>
-                </TabPanel>
-
+                {/* Issues Tab now shows only open PRs */}
                 <TabPanel className="h-full flex flex-col mt-2">
                   <div className="bg-gray-50 flex flex-col flex-1 overflow-y-auto min-h-0">
-         <h2 className="text-2xl font-bold mb-6 text-black">Pull Requests ({prs.length})</h2>
-         <div className="p-3 space-y-3">
-           {prs.map(pr => (
-            <div key={pr.id} className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow text-black">
-              <div className="flex items-center gap-3">
-                <span className={`px-2 py-1 rounded-full text-sm ${
-                  pr.state === 'open' 
-                    ? 'bg-purple-100 text-purple-800' 
-                    : 'bg-gray-100 text-gray-600'
-                }`}>
-                  {pr.state}
-                </span>
-                <h3 className="font-semibold text-black">{pr.title}</h3>
-              </div>
-              <p className="text-gray-700 text-sm">{pr.body?.substring(0, 150)}...</p>
-            </div>
-          ))}
-          {prs.length === 0 && (
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 text-center text-black">
-              <p className="text-gray-700 h-full">No open pull requests ✨</p>
-            </div>
-          )}
-        </div>
-      </div>
+                    <h2 className="text-2xl font-bold mb-4 text-black">Issues ({openPrs.length})</h2>
+                    <div className="p-3 space-y-3">
+                      {openPrs.map(pr => (
+                        <div key={pr.id} className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+                          <div className="flex items-start gap-3">
+                            <span className={`px-2 py-1 rounded-full text-sm ${pr.state === 'open' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
+                              {pr.state}
+                            </span>
+                            <h3 className="font-semibold">#{pr.number} {pr.title}</h3>
+                          </div>
+                          <p className="text-gray-700 text-sm mt-2">
+                            From <span className="font-medium text-gray-800">{pr.head.ref}</span> into <span className="font-medium text-gray-800">{pr.base.ref}</span> by <span className="font-medium text-gray-800">{pr.user?.login}</span>
+                          </p>
+                        </div>
+                      ))}
+                      {openPrs.length === 0 && (
+                        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 text-center">
+                          <p className="text-gray-700">No Issues Found ✨</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </TabPanel>
+
+                {/* Pull Requests */}
+                <TabPanel className="h-full flex flex-col mt-2 px-4">
+                  <h2 className="text-2xl font-bold mb-4 text-black">Pull Requests ({prs.length})</h2>
+                  <div className="flex-1 overflow-y-auto space-y-2">
+                    {prs.length > 0 ? prs.map(pr => (
+                      <div
+                        key={pr.id}
+                        className={`p-3 border rounded bg-white flex items-center justify-between cursor-pointer ${selectedPr===pr.number?'bg-blue-50':''}`}
+                      >
+                        <div className="flex-1" onClick={() => setSelectedPr(selectedPr === pr.number ? null : pr.number)}>
+                          <span className="font-semibold">#{pr.number} {pr.title}</span>{' '}
+                          <span className={`px-2 py-0.5 text-sm ${pr.state==='open'? 'bg-green-100 text-green-800':'bg-gray-100 text-gray-600'}`}>{pr.state}</span>
+                          <div className="text-xs text-gray-500 mt-1">
+                            From <span className="font-medium text-gray-800">{pr.head.ref}</span> into <span className="font-medium text-gray-800">{pr.base.ref}</span> by <span className="font-medium text-gray-800">{pr.user?.login}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleMergePR(pr);
+                            }}
+                            disabled={isPrMerging && mergingPrId===pr.number}
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded disabled:opacity-50 text-sm"
+                          >
+                            {isPrMerging && mergingPrId===pr.number ? 'Merging...' : 'Merge'}
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedPr(pr.number);
+                            }}
+                            className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm"
+                          >
+                            Resolve Conflicts
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDeletePR(pr); }}
+                            className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1 rounded text-sm"
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      </div>
+                    )) : (
+                      <div className="text-center text-gray-500">No pull requests found.</div>
+                    )}
+                  </div>
+                  {selectedPr && (
+                    <div className="mt-4 flex-1 overflow-auto">
+                      <h3 className="text-lg font-semibold mb-2 text-black">Conflicts for PR #{selectedPr}</h3>
+                      {prConflicts.length > 0 ? (
+                        <ConflictResolver
+                          repoId={repoId}
+                          conflicts={prConflicts}
+                          onAllResolved={() => toast.success('PR conflicts resolved')}
+                          onClose={() => setSelectedPr(null)}
+                        />
+                      ) : (
+                        <div className="relative p-4 text-center text-gray-500">
+                          <button onClick={() => setSelectedPr(null)} className="absolute top-0 right-0 p-2 text-gray-400 hover:text-gray-600">
+                            <FiX />
+                          </button>
+                          No conflicts for this PR.
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </TabPanel>
 
                 <TabPanel className="h-full flex flex-col mt-2">
@@ -1066,8 +1195,8 @@ const handleRepositoryAction = (action) => {
           <div className="bg-gray-50 flex-1 overflow-y-auto h-full min-h-0">
             <div className="flex items-center justify-between px-6 pt-3 pb-2">
               <h2 className="text-2xl font-bold text-black">README</h2>
-              <button
-                onClick={() => {
+                    <button
+                      onClick={() => {
                   // Simulate clicking the README file in the file tree
                   const readmeFile = {
                     path: 'README.md',
@@ -1080,8 +1209,8 @@ const handleRepositoryAction = (action) => {
                 className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm transition-colors"
               >
                 Edit README
-              </button>
-            </div>
+                    </button>
+                  </div>
             <div className="flex-1 overflow-y-auto px-6 mb-20">
               {isLoading ? (
                 <div className="h-full flex items-center justify-center">
@@ -1231,16 +1360,24 @@ const handleRepositoryAction = (action) => {
             </motion.div>
           </div> 
         </TabPanel>
-        <TabPanel className="h-full flex flex-col mt-2">
+        <TabPanel className="h-full flex flex-col mt-2 ">
           <h2>JIRA issues </h2>
         </TabPanel>
 
                 {/* Git Operations Panel */}
-                <TabPanel className="mt-[-25px] mb-25px text-white">
-                  <GitOperations
-                    repoId={repoId}
-                    onBranchChange={(branch) => handleBranchChange(branch)}
-                  />
+                <TabPanel className="h-full flex-1 mt-[-25px] mb-25px text-white">
+                  <ErrorBoundary>
+                    <GitOperations
+                      repoId={repoId}
+                      onBranchChange={handleBranchChange}
+                      onMergeComplete={() => setActiveTab(tabs.indexOf('Git Operations'))}
+                      onConflictList={(conflicts) => {
+                        setPrConflicts(conflicts);
+                        setActiveTab(tabs.indexOf('PRs'));
+                      }}
+                      onPRCreated={(newPR) => setPrs(prev => [newPR, ...prev])}
+                    />
+                  </ErrorBoundary>
                 </TabPanel>
               </div>
             </Tabs>
