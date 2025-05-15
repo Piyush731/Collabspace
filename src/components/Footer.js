@@ -1,5 +1,3 @@
-import React from 'react';
-
 function Footer() {
   return (
     <footer className="w-full bg-gradient-to-b from-slate-900 to-slate-800 border-t border-slate-700">

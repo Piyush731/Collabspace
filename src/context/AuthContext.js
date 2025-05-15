@@ -41,8 +41,12 @@ export const AuthProvider = ({ children }) => {
       setIsLoggedIn(true);
       setUser(response.data.user);
     } catch (error) {
-      console.error("Login failed:", error.response.data.message);
-      throw error.response.data.message;
+      console.error("Login failed:", error);
+      const errorMessage = error.response?.data?.error || 
+                        error.response?.data?.message || 
+                        error.message || 
+                        'Login failed';
+    throw errorMessage;
     }
   };
 
@@ -54,11 +58,14 @@ export const AuthProvider = ({ children }) => {
       setUser(response.data.user);
       return response.data;
     } catch (error) {
-      // Try to pick up backend .error or .message fields
-      const data = error.response?.data || {};
-      const errorMessage = data.error || data.message || data.details?.message || error.message || 'Signup failed';
-      console.error('Signup error:', data);
-      throw errorMessage;
+      console.error('Signup error:', error);
+    const data = error.response?.data || {};
+    const errorMessage = data.error || 
+                        data.message || 
+                        data.details?.message || 
+                        error.message || 
+                        'Signup failed';
+    throw errorMessage;
     }
   };
 

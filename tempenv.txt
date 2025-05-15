@@ -26,5 +26,217 @@ JIRA_EMAIL=piyushkashyap3247@gmail.com
 
 Change cors everytime, .env(backend) and config.js(frontend) 
 
+deployed gitea
+GITEA_URL=https://gitea-koyeb-production.up.railway.app
+GITEA_ADMIN_TOKEN=06e5da727a905bf055492611070a5b821eca8fd4
 
 
+06e5da727a905bf055492611070a5b821eca8fd4
+
+
+
+continue vs code
+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
+
+
+
+
+
+
+
+// components/CreateTaskModal.js
+import { useState } from "react";
+
+const CreateTaskModal = ({ 
+  visible, 
+  currentRepo,
+  collaborators,
+  onCreate, 
+  onCancel 
+}) => {
+  const [newTask, setNewTask] = useState({
+    title: '',
+    description: '',
+    priority: 'medium',
+    dueDate: '',
+    assignees: [],
+    labels: []
+  });
+
+  const [availableLabels] = useState([
+    'Authentication', 'Security', 'Backend', 'Frontend', 'Bug', 'Feature'
+  ]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setNewTask(prev => ({ ...prev, [name]: value }));
+  };
+
+  const toggleAssignee = (userId) => {
+    setNewTask(prev => ({
+      ...prev,
+      assignees: prev.assignees.includes(userId)
+        ? prev.assignees.filter(id => id !== userId)
+        : [...prev.assignees, userId]
+    }));
+  };
+
+  const toggleLabel = (label) => {
+    setNewTask(prev => ({
+      ...prev,
+      labels: prev.labels.includes(label)
+        ? prev.labels.filter(l => l !== label)
+        : [...prev.labels, label]
+    }));
+  };
+
+  if (!visible) return null;
+
+  return (
+    <dialog className="modal modal-open z-50">
+      <div className="modal-box bg-slate-800 text-white max-w-2xl relative">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold">Create New Task</h2>
+          <button 
+            onClick={onCancel}
+            className="btn btn-sm btn-ghost hover:bg-slate-700 rounded-full p-2"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="space-y-6">
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text text-white text-lg">Title</span>
+            </label>
+            <input
+              type="text"
+              name="title"
+              value={newTask.title}
+              onChange={handleChange}
+              className="input input-bordered bg-slate-700 border-slate-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              placeholder="Enter task title"
+              required
+            />
+          </div>
+
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text text-white text-lg">Description</span>
+            </label>
+            <textarea
+              name="description"
+              value={newTask.description}
+              onChange={handleChange}
+              className="textarea textarea-bordered bg-slate-700 border-slate-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 h-32"
+              placeholder="Describe the task details"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text text-white text-lg">Priority</span>
+              </label>
+              <select
+                name="priority"
+                value={newTask.priority}
+                onChange={handleChange}
+                className="select select-bordered bg-slate-700 border-slate-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+            </div>
+
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text text-white text-lg">Due Date</span>
+              </label>
+              <input
+                type="datetime-local"
+                name="dueDate"
+                value={newTask.dueDate}
+                onChange={handleChange}
+                className="input input-bordered bg-slate-700 border-slate-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text text-white text-lg">Assignees</span>
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {collaborators?.map(user => (
+                <button
+                  key={user._id}
+                  type="button"
+                  onClick={() => toggleAssignee(user._id)}
+                  className={`btn btn-sm ${
+                    newTask.assignees.includes(user._id)
+                      ? 'btn-primary'
+                      : 'btn-outline border-slate-600 hover:border-blue-500'
+                  }`}
+                >
+                  {user.username}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text text-white text-lg">Labels</span>
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {availableLabels.map(label => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => toggleLabel(label)}
+                  className={`btn btn-sm ${
+                    newTask.labels.includes(label)
+                      ? 'btn-accent'
+                      : 'btn-outline border-slate-600 hover:border-blue-500'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="modal-action mt-8">
+          <button 
+            type="button"
+            onClick={onCancel}
+            className="btn btn-ghost hover:bg-slate-700"
+          >
+            Cancel
+          </button>
+          <button 
+            type="button"
+            className="btn btn-primary px-6"
+            onClick={() => onCreate({
+              ...newTask,
+              dueDate: newTask.dueDate || undefined,
+              labels: newTask.labels.length ? newTask.labels : undefined
+            })}
+            disabled={!newTask.title}
+          >
+            Create Task
+          </button>
+        </div>
+      </div>
+      
+      {/* Backdrop */}
+      <div className="modal-backdrop bg-black/50" onClick={onCancel}></div>
+    </dialog>
+  );
+};
+
+export default CreateTaskModal;

@@ -13,7 +13,7 @@ console.log("GITEA_ADMIN_TOKEN:", GITEA_ADMIN_TOKEN ? "Token Present" : "Token M
 //User Dashboard Route
 router.get("/user", verifyToken, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select("username email userType createdAt");
+    const user = await User.findById(req.user.id).select("username email userType notificationPreferences themePreference createdAt");
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -104,11 +104,12 @@ router.post("/signup", async (req, res) => {
     
     // 3. Generate JWT token
      const token = jwt.sign(
-      { id: user._id  },
+      { id: user._id, userType: user.userType },
       process.env.JWT_SECRET,
       { expiresIn: '1d' }
     );
 
+    // Return full user data including id and preferences
     res.status(201).json({
       user: user.toObject(),
       token
@@ -158,7 +159,19 @@ router.post("/login", async (req, res) => {
       // Generate JWT token
       const token = jwt.sign({ id: user._id, userType: user.userType }, process.env.JWT_SECRET, { expiresIn: "1d" });
   
-      res.status(200).json({ token, user: { username: user.username, email: user.email, userType: user.userType } });
+      // Return full user data including id and preferences
+      res.status(200).json({
+        token,
+        user: {
+          _id: user._id,
+          username: user.username,
+          email: user.email,
+          userType: user.userType,
+          notificationPreferences: user.notificationPreferences,
+          themePreference: user.themePreference,
+          createdAt: user.createdAt
+        }
+      });
     } catch (error) {
       res.status(500).json({ message: "Something went wrong", error: error.message });
     } 
@@ -179,6 +192,22 @@ router.post("/login", async (req, res) => {
         res.status(500).json({ error: 'Deletion failed' });
       }
     });
+
+// Add endpoint to update user settings
+router.patch("/settings", verifyToken, async (req, res) => {
+  try {
+    const { notificationPreferences, themePreference } = req.body;
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { notificationPreferences, themePreference },
+      { new: true }
+    )
+      .select("username email userType notificationPreferences themePreference createdAt");
+    res.status(200).json({ user });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to update settings", error: error.message });
+  }
+});
   }); 
 
 module.exports = router;

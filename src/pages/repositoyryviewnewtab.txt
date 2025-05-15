@@ -1,0 +1,349 @@
+<Tabs
+  selectedIndex={activeTab}
+  onSelect={handleTabSelect}
+  className="flex-1 flex flex-col overflow-hidden bg-gradient-to-b from-gray-50 to-gray-100"
+>
+  <TabList className="flex space-x-1 bg-white border-b border-gray-200 px-6 shadow-sm">
+    {tabs.map((tab, index) => {
+      const icons = {
+        'Code': <VscFiles className="mr-2" />,
+        'Editor': <FiCode className="mr-2" />,
+        'Issues': <FiAlertCircle className="mr-2" />,
+        'PRs': <FiGitPullRequest className="mr-2" />,
+        'Commits': <VscSourceControl className="mr-2" />,
+        'README': <FiBook className="mr-2" />,
+        'Collaborators': <FiUsers className="mr-2" />,
+        'JIRA Issues': <FiSettings className="mr-2" />,
+        'Git Operations': <FiGitMerge className="mr-2" />
+      };
+      
+      return (
+        <Tab
+          key={tab}
+          className={`
+            px-4 py-3 cursor-pointer text-sm font-medium flex items-center
+            ${activeTab === index 
+              ? 'text-blue-600 border-b-2 border-blue-600' 
+              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}
+            transition-colors duration-200 focus:outline-none
+          `}  
+        >
+          {icons[tab]}
+          {tab}
+          {tab === 'Issues' && openPrs.length > 0 && (
+            <span className="ml-2 bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full text-xs">
+              {openPrs.length}
+            </span>
+          )}
+        </Tab>
+      );
+    })}
+  </TabList>
+
+  {/* Enhanced Tab Panels */}
+  <div className="flex flex-col overflow-hidden" ref={tabsContentRef}>
+    {/* Code Tab */}
+    <TabPanel className="h-full">
+      <div className="flex h-full gap-4 p-4">
+        <motion.div 
+          className="w-80 bg-white rounded-xl shadow-lg border border-gray-200 flex flex-col"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+        >
+          <div className="p-4 border-b border-gray-100">
+            <FileActions 
+              path={currentPath} 
+              onCreateFile={handleCreateFile}
+              onCreateDirectory={handleCreateDirectory}
+              onFolderUpload={handleFolderUpload}
+              onFileUpload={handleFileUpload}
+              onDownloadZip={handleDownloadZip}
+            />
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            <FileTree
+              repoId={repoId}
+              activeBranch={activeBranch}
+              contents={currentDir}
+              onFileSelect={async (item) => {
+                setSelectedFile(item);
+                if (!tabs.includes('Editor')) {
+                  setTabs([...tabs, 'Editor']);
+                }
+                setActiveTab(tabs.indexOf('Editor'));
+                try {
+                  setIsFileLoading(true);
+                  await fetchFileContent(item);
+                } catch (error) {
+                  toast.error(`Failed to load file: ${error.message}`);
+                } finally {
+                  setIsFileLoading(false);
+                }
+              }}
+              currentPath={currentPath}
+              onPathChange={(path) => {
+                setCurrentPath(path);
+                fetchDirectoryContents(activeBranch, path);
+              }}
+              selectedDirectory={currentPath}
+              setSelectedDirectory={(path) => {
+                setCurrentPath(path);
+                fetchDirectoryContents(activeBranch, path);
+              }}
+              isLoading={isLoading}
+            />
+          </div>
+        </motion.div>
+
+        {/* Editor Section */}
+        <div className="flex-1 flex flex-col bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+          {selectedFile ? (
+            <>
+              <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+                <div className="flex items-center">
+                  <span className="text-sm font-mono text-gray-600">
+                    {selectedFile.path}
+                  </span>
+                  <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                    {activeBranch}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    placeholder="Commit message"
+                    value={commitMessage}
+                    onChange={(e) => setCommitMessage(e.target.value)}
+                    className="px-3 py-1 border rounded text-sm w-64"
+                  />
+                  <button 
+                    onClick={handleSave}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium flex items-center gap-2"
+                  >
+                    <FiCode className="text-base" />
+                    {isRepoDataLoading ? 'Saving...' : 'Commit Changes'}
+                  </button>
+                </div>
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <Editor
+                  height="100%"
+                  width="100%"
+                  language="javascript"
+                  theme="vs-dark"
+                  value={code || ''}
+                  onChange={handleCodeChange}
+                  options={{
+                    minimap: { enabled: true },
+                    automaticLayout: true,
+                    scrollBeyondLastLine: false,
+                    readOnly: fileContent === 'File too large to display',
+                    padding: { top: 20, bottom: 20 },
+                    fontFamily: 'Fira Code',
+                    fontLigatures: true,
+                  }}
+                  onValidate={(markers) => setCodeMarkers(markers)}
+                  onMount={(editor) => {
+                    editor.onDidChangeCursorSelection(({ selection }) => {
+                      const selectedText = editor.getModel().getValueInRange(selection);
+                      handleCodeSelection(selectedText);
+                    });
+                  }}
+                />
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+              <div className="text-4xl mb-4 text-gray-300">📁</div>
+              <p className="text-gray-500 text-lg font-medium">
+                {currentDir.length 
+                  ? "Select a file to begin editing"
+                  : "This directory is empty"}
+              </p>
+              <p className="text-sm text-gray-400 mt-2">
+                {currentDir.length 
+                  ? "or create a new file using the buttons above"
+                  : "Upload files or create new ones to get started"}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </TabPanel>
+
+    {/* Enhanced PRs Tab */}
+    <TabPanel className="h-full p-4">
+      <div className="bg-white rounded-xl shadow-lg border border-gray-200 h-full flex">
+        <div className="w-96 border-r border-gray-200 overflow-y-auto">
+          <div className="p-4 border-b border-gray-200">
+            <h2 className="text-lg font-semibold">Pull Requests ({prs.length})</h2>
+          </div>
+          <div className="divide-y divide-gray-200">
+            {prs.map(pr => (
+              <div
+                key={pr.id}
+                className={`p-4 cursor-pointer hover:bg-gray-50 ${selectedPr === pr.number ? 'bg-blue-50' : ''}`}
+                onClick={() => setSelectedPr(pr.number)}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-2 h-2 rounded-full ${pr.state === 'open' ? 'bg-green-500' : 'bg-gray-400'}`} />
+                  <div className="flex-1">
+                    <h3 className="font-medium">#{pr.number} {pr.title}</h3>
+                    <p className="text-sm text-gray-500 mt-1">
+                      {pr.user?.login} · {new Date(pr.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        
+        {/* PR Details Panel */}
+        <div className="flex-1 p-6 overflow-y-auto">
+          {selectedPr ? (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-semibold">PR #{selectedPr}</h3>
+                <button
+                  onClick={() => setSelectedPr(null)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <FiX className="w-5 h-5" />
+                </button>
+              </div>
+              
+              {/* Conflict Resolution Section */}
+              {prConflicts.length > 0 ? (
+                <ConflictResolver
+                  repoId={repoId}
+                  conflicts={prConflicts}
+                  onAllResolved={() => toast.success('PR conflicts resolved')}
+                  onClose={() => setSelectedPr(null)}
+                />
+              ) : (
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <div className="flex items-center gap-3 text-green-700">
+                    <FiGitMerge className="w-5 h-5" />
+                    <span>No conflicts detected - Ready to merge</span>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-4">
+                <div className="flex gap-4">
+                  <button
+                    onClick={() => handleMergePR(prs.find(p => p.number === selectedPr))}
+                    className="bg-green-600 text-white px-4 py-2 rounded-md flex items-center gap-2 hover:bg-green-700"
+                  >
+                    <FiGitMerge className="w-4 h-4" />
+                    Merge Pull Request
+                  </button>
+                  <button
+                    onClick={() => handleDeletePR(prs.find(p => p.number === selectedPr))}
+                    className="bg-red-600 text-white px-4 py-2 rounded-md flex items-center gap-2 hover:bg-red-700"
+                  >
+                    <FiX className="w-4 h-4" />
+                    Close Pull Request
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="h-full flex items-center justify-center text-gray-400">
+              Select a pull request to view details
+            </div>
+          )}
+        </div>
+      </div>
+    </TabPanel>
+
+    {/* Enhanced Collaborators Tab */}
+    <TabPanel className="h-full p-4">
+      <div className="bg-white rounded-xl shadow-lg border border-gray-200 h-full flex flex-col">
+        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Collaborators</h2>
+          <motion.button
+            onClick={() => setShowAddCollaborator(true)}
+            className="bg-blue-600 text-white px-4 py-2 rounded-md flex items-center gap-2 hover:bg-blue-700"
+            whileHover={{ scale: 1.05 }}
+          >
+            <FiUsers className="w-4 h-4" />
+            Add Collaborator
+          </motion.button>
+        </div>
+        
+        <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Owner Card */}
+          <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                <FiUsers className="text-blue-600" />
+              </div>
+              <div>
+                <h3 className="font-medium">{repoData.owner.username}</h3>
+                <p className="text-sm text-gray-500">Owner</p>
+              </div>
+              <span className="ml-auto px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                Admin
+              </span>
+            </div>
+          </div>
+
+          {/* Collaborators */}
+          {collaborators.map(collab => (
+            <div key={collab.user?._id} className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                  <FiUsers className="text-gray-600" />
+                </div>
+                <div>
+                  <h3 className="font-medium">{collab.user?.username}</h3>
+                  <p className="text-sm text-gray-500 capitalize">{collab.permission}</p>
+                </div>
+                <span className="ml-auto px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full">
+                  Collaborator
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </TabPanel>
+
+
+
+
+
+
+    old tablist 
+
+    <TabList className="flex space-x-1 bg-white border-b border-gray-200 px-4">
+                {tabs.map((tab, index) => (
+                  <Tab
+                    key={tab}
+                    className={`
+                      px-4 py-3 cursor-pointer text-sm font-medium 
+                      ${activeTab === index ? 'text-blue-600' : 'text-gray-500 hover:text-gray-700'}  
+                      transition-colors focus:outline-none
+                    `}  
+                  >
+                    <div className="relative flex items-start justify-center">
+                      {tab}
+                      <AnimatePresence>
+                        {activeTab === index && (
+                          <motion.div
+                            key="underline"
+                            className="absolute -bottom-px left-0 right-0 h-0.5 bg-blue-600"
+                            layoutId="tabUnderline"
+                            initial={{ scaleX: 0 }}
+                            animate={{ scaleX: 1 }}
+                            exit={{ scaleX: 0 }}
+                            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                          />
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </Tab>
+                ))}
+              </TabList>

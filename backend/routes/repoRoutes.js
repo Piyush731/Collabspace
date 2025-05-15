@@ -8,7 +8,7 @@ const gitController = require('../controllers/gitController');
 
 const {createRepository, getRepository, getUserRepositories, getRepoContents, getRecursiveContents, 
   createFile, updateFile, createDirectory, deleteFile, downloadRepoZip,
-  addCollaborator, syncCollaborators} = require('../controllers/repoController'); 
+  addCollaborator, syncCollaborators,getRepoCollaborators} = require('../controllers/repoController'); 
 
 router.post('/', verifyToken, createRepository); //create 
 router.get('/my-repos', verifyToken, getUserRepositories); //get user repo
@@ -25,6 +25,7 @@ router.post('/:repoId/create-file', verifyToken, createFile);
 router.put('/:repoId/update-file', verifyToken, updateFile);
 router.post('/:repoId/create-directory', verifyToken, createDirectory);
 router.post('/:repoId/delete-file', verifyToken, deleteFile);
+router.get('/:repoId/collaborators', verifyToken, getRepoCollaborators);
 router.post('/:repoId/collaborators', verifyToken, addCollaborator);
 router.post('/:repoId/sync-collaborators', verifyToken, syncCollaborators);
 router.get( '/:repoId/download-zip', verifyToken, downloadRepoZip );

@@ -167,8 +167,6 @@ exports.getUserRepositories = async (req, res) => {
       res.status(500).json({ error: 'Failed to fetch user repositories' });
     }
   }; 
-
-
   
 //contents of repo
 exports.getRepoContents = async (req, res) => {
@@ -646,3 +644,31 @@ exports.addCollaborator = async (req, res) => {
     res.status(status).json({ error: message });
   }
 };
+
+// backend/controllers/repoController.js
+exports.getRepoCollaborators = async (req, res) => {
+  try {
+    const repo = await Repository.findById(req.params.repoId)
+      .populate({
+        path: 'collaborators.user',
+        select: '_id username email' // Only return essential fields
+      });
+
+    if (!repo) {
+      return res.status(404).json({ error: 'Repository not found' });
+    }
+
+    // Format the response
+    const collaborators = repo.collaborators.map(c => ({
+      _id: c.user._id,
+      username: c.user.username,
+      email: c.user.email,
+      permission: c.permission
+    }));
+
+    res.status(200).json(collaborators);
+  } catch (error) {
+    console.error('Error fetching collaborators:', error);
+    res.status(500).json({ error: 'Failed to fetch collaborators' });
+  }
+}; 

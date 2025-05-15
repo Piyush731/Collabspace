@@ -16,11 +16,14 @@ import LoadingRepository from '../components/LoadingRepository';
 import API_URL from "../config";
 import ChatModal from '../components/Chat';
 import AddCollaboratorModal from '../components/AddCollaboratorModal';
+import { FiCode, FiGitPullRequest, FiAlertCircle, FiBook, FiUsers, FiSettings, FiMessageSquare } from 'react-icons/fi';
+import { VscFiles, VscSourceControl } from 'react-icons/vsc';
 import { FiGitBranch, FiGitMerge, FiGitCommit, FiX } from 'react-icons/fi';
 import GitOperations from '../components/GitOperations';
 import ErrorBoundary from '../components/ErrorBoundary';
 import api from '../utils/api';
 import ConflictResolver from '../components/ConflictResolver';
+
 
 // Animation configurations
 const containerVariants = {
@@ -852,35 +855,42 @@ const handleRepositoryAction = (action) => {
               onSelect={handleTabSelect}
               className="flex-1 flex flex-col overflow-hidden"
             >
-              <TabList className="flex space-x-1 bg-white border-b border-gray-200 px-4">
-                {tabs.map((tab, index) => (
-                  <Tab
-                    key={tab}
-                    className={`
-                      px-4 py-3 cursor-pointer text-sm font-medium 
-                      ${activeTab === index ? 'text-blue-600' : 'text-gray-500 hover:text-gray-700'}  
-                      transition-colors focus:outline-none
-                    `}  
-                  >
-                    <div className="relative flex items-start justify-center">
-                      {tab}
-                      <AnimatePresence>
-                        {activeTab === index && (
-                          <motion.div
-                            key="underline"
-                            className="absolute -bottom-px left-0 right-0 h-0.5 bg-blue-600"
-                            layoutId="tabUnderline"
-                            initial={{ scaleX: 0 }}
-                            animate={{ scaleX: 1 }}
-                            exit={{ scaleX: 0 }}
-                            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                          />
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  </Tab>
-                ))}
-              </TabList>
+              <TabList className="flex space-x-1 bg-white border-b border-gray-200 px-6 shadow-sm">
+    {tabs.map((tab, index) => {
+      const icons = {
+        'Code': <VscFiles className="mr-2" />,
+        'Editor': <FiCode className="mr-2" />,
+        'Issues': <FiAlertCircle className="mr-2" />,
+        'PRs': <FiGitPullRequest className="mr-2" />,
+        'Commits': <VscSourceControl className="mr-2" />,
+        'README': <FiBook className="mr-2" />,
+        'Collaborators': <FiUsers className="mr-2" />,
+        'JIRA Issues': <FiSettings className="mr-2" />,
+        'Git Operations': <FiGitMerge className="mr-2" />
+      };
+      
+      return (
+        <Tab
+          key={tab}
+          className={`
+            px-4 py-3 cursor-pointer text-sm font-medium flex items-center
+            ${activeTab === index 
+              ? 'text-blue-600 border-b-2 border-blue-600' 
+              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}
+            transition-colors duration-200 focus:outline-none
+          `}  
+        >
+          {icons[tab]}
+          {tab}
+          {tab === 'Issues' && openPrs.length > 0 && (
+            <span className="ml-2 bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full text-xs">
+              {openPrs.length}
+            </span>
+          )}
+        </Tab>
+      );
+    })}
+  </TabList>
 
               {/* Tab Panels */}
               <div className="flex flex-col overflow-hidden bg-gray-50"    ref={tabsContentRef}>

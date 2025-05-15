@@ -5,6 +5,8 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import { AuthProvider } from "./context/AuthContext"; 
+import { SocketProvider} from './context/SocketContext';
+import { TaskProvider } from './context/TaskContext';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 
@@ -14,9 +16,13 @@ const root = createRoot(document.getElementById("root")); // Correct usage
 root.render(
   <Router>
      <AuthProvider>
-    <React.StrictMode>
-      <App />
-    </React.StrictMode>
+      <SocketProvider>
+        <TaskProvider>
+          <React.StrictMode>
+            <App />
+          </React.StrictMode>
+        </TaskProvider>
+     </SocketProvider>
     </AuthProvider>
   </Router>
 );

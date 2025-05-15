@@ -5,7 +5,10 @@ import axios from "axios";
 import Sidebar from "../components/sidebar";
 import UserNavbar from "../components/UserNavbar";
 import RepositoryCard from "../components/RepositoryCard"; 
+import Notifications from '../pages/notifications';
 import API_URL from "../config";
+import Lottie from "lottie-react";
+import { FiPlus, FiCode, FiUsers, FiLock, FiGlobe } from "react-icons/fi";
 
 const Dashboard = () => {
   const [user, setUser] = useState(null);
@@ -78,57 +81,119 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen w-full bg-gradient-to-b from-slate-900 to-slate-800 text-white
                      w-screen mx-[-20px] mb-[-20px] px-[20px] pb-[20px] overflow-x-hidden">
-      <UserNavbar toggleSidebar={toggleSidebar} isSidebarOpen={isSidebarOpen} />
+      <UserNavbar toggleSidebar={toggleSidebar} isSidebarOpen={isSidebarOpen} notifications={<Notifications />} />
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
 
       <main
-        className={`pt-16 transition-all duration-300 ${
-          isSidebarOpen ? "pl-64" : "pl-0"
+        className={`pt-20 transition-all duration-300 ${
+          isSidebarOpen ? "pl-72" : "pl-0"
         }`}
       >
-        <div className="p-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-gray-800 rounded-xl p-6 shadow-xl mb-8"
-          >
-            <h1 className="text-3xl font-bold text-white mb-2">
-              Welcome, {user?.username || 'User'}!
-            </h1>
-            <p className="text-gray-400">{user?.email || ''}</p>
-          </motion.div>
+        <div className="p-6 md:p-8 w-full max-w-[1920px] mx-auto ">
 
-          <div className="mb-8 flex justify-between items-center">
-            <h2 className="text-2xl font-bold text-white">Repositories</h2>
+        <motion.div
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.5 }}
+  className="bg-gradient-to-br from-blue-600/20 to-indigo-600/30 rounded-2xl p-3 md:p-4 backdrop-blur-lg border border-slate-700/50 
+     mb-5 flex flex-col md:flex-row items-center justify-between gap-3 md:gap-4 relative overflow-hidden"
+>
+  {/* Animated background elements */}
+  <div className="absolute inset-0 opacity-20">
+    <div className="absolute -top-20 -right-20 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl animate-pulse-slow" />
+    <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl animate-pulse-slow delay-1000" />
+  </div>
+
+  {/* User Info Section */}
+  <div className="flex-1 z-10">
+    <motion.div 
+      className="flex items-center gap-3 md:gap-4"
+      initial={{ x: -20 }}
+      animate={{ x: 0 }}
+    >
+      <motion.div
+        whileHover={{ scale: 1.05 }}
+        className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-xl font-bold shadow-lg"
+      >
+        {user?.username?.[0]?.toUpperCase() || 'U'}
+      </motion.div>
+      
+      <div className="space-y-0.5">
+        <h1 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-blue-300 to-indigo-300 bg-clip-text text-transparent">
+          Welcome back, {user?.username || 'Developer'}!
+        </h1>
+        <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-3 text-slate-300">
+          <div className="flex items-center gap-1">
+            <FiCode className="w-3 h-3" />
+            <span className="text-xs md:text-sm">{repos.length} repositories</span>
+          </div>
+          <span className="hidden md:block text-xs">•</span>
+          <span className="text-xs md:text-sm truncate">{user?.email}</span>
+        </div>
+      </div>
+    </motion.div>
+  </div>
+
+  {/* Animated Graphic */}
+  <motion.div 
+    className="hidden md:block w-32 h-32 z-10  mr-20 mt-[-20px]"
+    initial={{ scale: 0.8 }}
+    animate={{ scale: 1 }}
+    transition={{ type: 'spring', stiffness: 100 }}
+  >
+    <Lottie 
+      animationData={require('../assets/teamwork.json')}
+      loop={true}
+      style={{ height: '150%',
+          width: '155%'
+       }}
+      rendererSettings={{
+        preserveAspectRatio: 'xMidYMid slice',
+        className: 'drop-shadow-xl'
+      }}
+    />
+  </motion.div>
+</motion.div>
+
+          <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <h2 className="text-xl md:text-2xl font-bold">Your Workspace</h2>
+              <p className="text-slate-400 mt-1">Manage your code repositories</p>
+            </div>
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => navigate("/create-repo")}
-              className="bg-blue-600 text-white px-6 py-3 rounded-lg flex items-center space-x-2"
+              className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-xl flex items-center gap-2 w-full md:w-auto"
             >
-              <i className="bi bi-plus-lg"></i>
+              <FiPlus className="text-lg" />
               <span>New Repository</span>
             </motion.button>
           </div>
 
           <AnimatePresence>
             {repoLoading ? (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-center py-12"
-              >
-                <div className="animate-pulse text-gray-500">
-                  Loading repositories...
-                </div>
-              </motion.div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[...Array(6)].map((_, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="h-40 bg-slate-800/50 rounded-xl animate-pulse"
+                  />
+                ))}
+              </div>
             ) : !repos || repos.length === 0 ? (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="text-center py-12 text-gray-500"
+                className="text-center py-12 rounded-xl bg-slate-800/30"
               >
-                No repositories found
+                <div className="max-w-md mx-auto">
+                  <div className="text-6xl mb-4">📂</div>
+                  <h3 className="text-xl font-semibold mb-2">No repositories found</h3>
+                  <p className="text-slate-400">Get started by creating a new repository</p>
+                </div>
               </motion.div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -138,7 +203,7 @@ const Dashboard = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.1 }}
-                    whileHover={{ scale: 1.02 }}
+                    whileHover={{ y: -5 }}
                   >
                     <RepositoryCard
                       repo={repo}

@@ -3,6 +3,7 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const Message = require("../models/Message");
 const Repository = require("../models/Repository");
+const typingUsers = new Map();
 
 module.exports = function initializeSocket(server) {
   const io = new Server(server, {
@@ -12,7 +13,7 @@ module.exports = function initializeSocket(server) {
       methods: ["GET", "POST"],
       credentials: true,
     },
-    path: "/socket.io",
+    //path: "/socket.io",   rremoved 
   });
 
   // **WebSocket Error Handling**
@@ -24,44 +25,37 @@ module.exports = function initializeSocket(server) {
     console.log("Context:", err.context);
   });
 
-  // **WebSocket Authentication Middleware**
-  io.use(async (socket, next) => {
+   // Shared Authentication Middleware
+  const authMiddleware = async (socket, next) => {
     try {
       const token = socket.handshake.auth.token;
-      if (!token) {
-        console.warn("⚠ WebSocket Authentication Failed: No token provided.");
-        return next(new Error("Authentication error - No token"));
-      }
-
-      let decoded;
-      try {
-        decoded = jwt.verify(token, process.env.JWT_SECRET);
-        console.log("🔑 Decoded Token:", decoded);
-      } catch (err) {
-        console.error("❌ JWT Verification Failed:", err.message);
-        return next(new Error("Authentication error - Invalid token"));
-      }
-
+      if (!token) return next(new Error("Authentication error"));
+      
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
       const user = await User.findById(decoded.id);
-      if (!user) {
-        console.warn(`⚠ WebSocket Authentication Failed: User ${decoded._id} not found in DB.`);
-        return next(new Error("Authentication error - User not found"));
-      }
-
+      if (!user) return next(new Error("Authentication error"));
+      
       socket.user = user;
-      console.log(`✅ WebSocket Authenticated: ${user.username} (ID: ${user._id})`);
       next();
     } catch (err) {
-      console.error("❌ WebSocket Authentication Error:", err);
-      next(new Error("Authentication error - Unexpected error"));
+      next(new Error("Authentication error"));
     }
-  });
+  };
 
-  // **WebSocket Connection & Events**
+  const chatNamespace = io.of("/chat");
+  chatNamespace.use(authMiddleware);
+  configureChatNamespace(chatNamespace);
+
+  // Task Namespace
+  const taskNamespace = io.of("/tasks");
+  taskNamespace.use(authMiddleware);
+  configureTaskNamespace(taskNamespace);
+};
+
+  function configureChatNamespace(io) {
   io.on("connection", (socket) => {
     console.log(`🔌 New WebSocket Connection: ${socket.id} (User: ${socket.user?.username})`);
 
-    // **Join Repository Room**
     socket.on("join-repo", async (repoId) => {
       console.log(`📥 ${socket.user.username} attempting to join repo chat: ${repoId}`);
 
@@ -93,8 +87,7 @@ module.exports = function initializeSocket(server) {
         console.error("❌ Error joining repository chat:", error);
       }
     });
-
-    // **Send Message**
+    
     socket.on("send-message", async ({ repoId, content }) => {
       console.log(`📨 ${socket.user.username} sending message to repo: ${repoId}`);
       if (!socket.user || !socket.user._id) {
@@ -125,15 +118,61 @@ module.exports = function initializeSocket(server) {
       }
     });
 
-    // **Leave Repository Room**
     socket.on("leave-repo", (repoId) => {
       console.log(`📤 ${socket.user.username} leaving repo chat: ${repoId}`);
       socket.leave(repoId);
     });
 
-    // **WebSocket Disconnection**
     socket.on("disconnect", () => {
       console.log(`❌ WebSocket Disconnected: ${socket.id} (User: ${socket.user?.username})`);
     });
+   });
+  }
+
+  function configureTaskNamespace(io) {
+  io.on("connection", (socket) => {
+    console.log(`🔌 Task connection: ${socket.user.username}`);
+
+    // Join task-specific rooms
+    socket.on("join-task-room", (taskId) => {
+      socket.join(`task-${taskId}`);
+    });
+
+    // Typing indicators
+    socket.on("task-comment-typing", ({ repoId, taskId, isTyping }) => {
+      if (isTyping) {
+        typingUsers.set(socket.user._id, { repoId, taskId });
+        socket.to(`repo-${repoId}`).emit("user-typing", {
+          userId: socket.user._id,
+          taskId,
+          username: socket.user.username
+        });
+      } else {
+        typingUsers.delete(socket.user._id);
+      }
+    });
+
+    // Task updates
+    socket.on("task-update", async (update) => {
+      try {
+        const task = await Task.findByIdAndUpdate(
+          update.taskId,
+          update.changes,
+          { new: true }
+        ).populate("assignees");
+
+        // Broadcast to repository and specific task room
+        io.to(`repo-${task.repository}`)
+          .to(`task-${task._id}`)
+          .emit("task-updated", task);
+      } catch (error) {
+        console.error("Task update error:", error);
+      }
+    });
+
+    // Cleanup on disconnect
+    socket.on("disconnect", () => {
+      typingUsers.delete(socket.user._id);
+    });
   });
-};
+ }

@@ -5,6 +5,7 @@ import API_URL from '../config';
 
 const SocketContext = createContext();
 
+
 export const SocketProvider = ({ children }) => {
   const { user } = useAuth();
   const [socket, setSocket] = useState(null); 
@@ -48,4 +49,26 @@ export const SocketProvider = ({ children }) => {
 }; 
 export const useSocket = () => {
   return useContext(SocketContext);
+};
+export const setupSocketListeners = (socket, dispatch) => {
+  socket.on('task-updated', (task) => {
+    dispatch({ type: 'UPDATE_TASK', payload: task });
+  });
+
+  socket.on('user-typing', ({ userId, taskId }) => {
+    dispatch({ type: 'SET_TYPING_INDICATOR', payload: { userId, taskId } });
+  });
+
+  socket.on('new-notification', (notifications) => {
+    dispatch({ type: 'UPDATE_NOTIFICATIONS', payload: notifications });
+  });
+};
+
+export const useSocketEvent = (eventName, callback) => {
+  const socket = useSocket();
+
+  useEffect(() => {
+    socket.on(eventName, callback);
+    return () => socket.off(eventName, callback);
+  }, [eventName, callback, socket]);
 };

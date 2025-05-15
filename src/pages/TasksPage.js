@@ -1,410 +1,379 @@
-import { motion } from 'framer-motion';
-import { useState } from 'react';
-import { 
-  ArrowLeftIcon,
-  PencilIcon,
-  CheckCircleIcon,
-  CalendarIcon,
-  UserCircleIcon,
-  TagIcon,
-  ClockIcon,
-  ChatBubbleLeftIcon,
-  PaperClipIcon,
-  TrashIcon,
-  ChevronUpDownIcon
-} from '@heroicons/react/24/outline';
+import React, { useEffect, useState , useMemo} from 'react';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '../context/AuthContext';
+import { useTask } from '../context/TaskContext';
+import UserNavbar from '../components/UserNavbar';
+import Sidebar from '../components/sidebar';
+import TaskDetailsModal from '../components/TaskDetailsModal';
+import CreateTaskModal from '../components/CreateTaskModal';
+import TaskCard from '../components/TaskCard';
+import Notifications from '../pages/notifications';
+import { Toaster, toast } from 'react-hot-toast';
+import { Switch } from '@headlessui/react';
+import axios from 'axios';
+import API_URL from '../config';
+const statuses = ['backlog', 'todo', 'in-progress', 'review', 'done'];
+const statusLabels = {
+  backlog: 'Backlog',
+  todo: 'To Do',
+  'in-progress': 'In Progress',
+  review: 'In Review',
+  done: 'Done'
+};
 
-const TaskView = () => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [task, setTask] = useState({
-    title: 'Implement user authentication',
-    description: 'Create secure login system with JWT tokens and refresh tokens',
-    priority: 'high',
-    status: 'in-progress',
-    dueDate: '2024-03-15',
-    assignees: ['Alex Chen', 'Samira Khan'],
-    labels: ['Authentication', 'Security', 'Backend'],
-    comments: [
-      {
-        id: 1,
-        user: 'Alex Chen',
-        text: 'Need to integrate with existing user database',
-        timestamp: '2h ago'
+const TasksPage = () => {
+  const { user } = useAuth();
+  const { 
+    fetchRepos,
+    board,
+    repos,
+    fetchTasks,
+    currentRepo,
+    setCurrentRepo,
+    fetchBoard,
+    createTask,
+    syncWithGitea
+  } = useTask();
+  const [viewMode, setViewMode] = useState('repo');
+  const [selectedRepo, setSelectedRepo] = useState(null);
+  const [tasks, setTasks] = useState([]);
+  const [selectedTask, setSelectedTask] = useState(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedLabel, setSelectedLabel] = useState('all');
+  const [selectedAssignee, setSelectedAssignee] = useState('all');
+  const [collaborators, setCollaborators] = useState([]);
+
+
+   // Enhanced task filtering
+const filteredTasks = useMemo(() => {
+  if (viewMode === 'repo') {
+    return Object.entries(board?.columns || {}).reduce((acc, [statusKey, tasks]) => {
+      acc[statusKey] = tasks.filter(task => {
+        const matchesSearch = task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          task.description?.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesLabel = selectedLabel === 'all' || task.labels?.includes(selectedLabel);
+        const matchesAssignee = selectedAssignee === 'all' || 
+          task.assignees?.some(a => a._id === selectedAssignee);
+        return matchesSearch && matchesLabel && matchesAssignee;
+      });
+      return acc;
+    }, {});
+  } else {
+    return tasks.filter(task => {
+      const matchesSearch = task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        task.description?.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesLabel = selectedLabel === 'all' || task.labels?.includes(selectedLabel);
+      return matchesSearch && matchesLabel;
+    });
+  }
+}, [board, tasks, searchQuery, selectedLabel, selectedAssignee, viewMode]);
+
+  // Fetch collaborators when repo changes
+  useEffect(() => {
+    const fetchCollaborators = async () => {
+      if (currentRepo?._id) {
+        try {
+          const res = await axios.get(`${API_URL}/api/repos/${currentRepo._id}/collaborators`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+          });
+          setCollaborators(res.data);
+        } catch (error) {
+          toast.error('Failed to load collaborators');
+        }
       }
-    ],
-    attachments: ['auth_spec.pdf'],
-    activity: [
-      { id: 1, text: 'Task created by Samira Khan', timestamp: '3 days ago' },
-      { id: 2, text: 'Assigned to Alex Chen', timestamp: '2 days ago' }
-    ]
-  });
+    };
+    fetchCollaborators();
+  }, [currentRepo]); 
 
-  // Animation variants
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: { 
-      opacity: 1,
-      transition: { staggerChildren: 0.1, delayChildren: 0.2 }
+  useEffect(() => {
+  const loadData = async () => {
+    try {
+      await fetchRepos();
+      if (viewMode === 'user') {
+        const userTasks = await axios.get(`${API_URL}/api/tasks/user/${user._id}`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        setTasks(userTasks.data);
+      }
+    } catch (error) {
+      toast.error('Failed to load data');
+    }
+  };
+  loadData();
+}, [viewMode]);
+
+const handleViewModeChange = (mode) => {
+  setViewMode(mode);
+  setCurrentRepo(null);
+};
+
+  const handleRepoSelect = async (repo) => {
+    setSelectedRepo(repo);
+    try {
+      const data = await fetchTasks(repo.id);
+      setTasks(data);
+    } catch (error) {
+      toast.error('Failed to load tasks');
     }
   };
 
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: { y: 0, opacity: 1 }
-  };
+  const handleStatusChange = async (taskId, newStatus) => {
+  try {
+    await axios.patch(`${API_URL}/api/tasks/${taskId}/status`, { status: newStatus }, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    });
+    // Update local state or refetch data
+  } catch (error) {
+    toast.error('Failed to update task status');
+  }
+};
+
+  const handleDragEnd = async (result) => {
+  const { source, destination, draggableId } = result;
+  if (!destination || (viewMode === 'repo' && !currentRepo)) return;
+
+  try {
+    const task = viewMode === 'repo' 
+      ? board.columns[source.droppableId].find(t => t._id === draggableId)
+      : tasks.find(t => t._id === draggableId);
+
+    // Single API call
+    await axios.patch(`${API_URL}/api/tasks/${draggableId}/status`, {
+      status: destination.droppableId,
+      repositoryId: viewMode === 'user' ? task.repository?._id : currentRepo?._id
+    }, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    });
+
+    // Update state
+    if (viewMode === 'repo') {
+      fetchBoard(currentRepo._id);
+    } else {
+      const updatedTasks = tasks.map(t => 
+        t._id === draggableId ? {...t, status: destination.droppableId} : t
+      );
+      setTasks(updatedTasks);
+    }
+  } catch (err) {
+    toast.error('Failed to update task status');
+  }
+};
+
+  const handleCreateTask = async (taskData) => {
+  try {
+    await createTask({
+      ...taskData,
+      repository: currentRepo._id,
+      createdBy: user._id
+    });
+    setShowCreateModal(false);
+    toast.success('Task created successfully!');
+    fetchBoard(currentRepo._id); // Refresh board data
+  } catch (error) {
+    toast.error(error.message || 'Failed to create task');
+  }
+};
+
+   const handleTaskUpdate = (updatedTask) => {
+        //  dispatch({ type: 'UPDATE_TASK', payload: updatedTask }); (no defined dispatched)
+        setSelectedTask(null);
+    };
 
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="min-h-screen bg-gray-50 p-8"
+      className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 text-white"
     >
-      <div className="max-w-6xl mx-auto bg-white rounded-2xl shadow-lg">
-        {/* Header */}
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="p-6 border-b border-gray-200"
-        >
-          <div className="flex items-center gap-4 mb-6">
-            <motion.span whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <ArrowLeftIcon className="h-6 w-6 text-gray-600 cursor-pointer" />
-            </motion.span>
-            {isEditing ? (
-              <input
-                type="text"
-                value={task.title}
-                onChange={(e) => setTask({ ...task, title: e.target.value })}
-                className="text-2xl font-bold flex-1 px-3 py-2 border rounded-lg"
-              />
-            ) : (
-              <motion.h1 
-                variants={itemVariants}
-                className="text-2xl font-bold flex-1"
-              >
-                {task.title}
-              </motion.h1>
-            )}
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setIsEditing(!isEditing)}
-              className="p-2 hover:bg-gray-100 rounded-lg"
+      <UserNavbar 
+        toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} 
+        isSidebarOpen={isSidebarOpen}
+        notifications={<Notifications />}
+      />
+      
+      <Sidebar 
+        isOpen={isSidebarOpen}
+        toggleSidebar={toggleSidebar}
+      />
+
+      <main className={`pt-16 transition-all duration-300 ${isSidebarOpen ? 'pl-64' : 'pl-0'}`}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+         <div className="flex justify-between items-center mb-8 flex-wrap gap-4">
+  <div className="flex items-center gap-4">
+    <div className="flex items-center gap-4">
+  {viewMode === 'repo' && (
+    <select 
+      value={currentRepo?._id || ''}
+      onChange={(e) => {
+        const repo = repos.find(r => r._id === e.target.value);
+        setCurrentRepo(repo);
+        if (repo) fetchBoard(repo._id);
+      }}
+      className="bg-slate-700 text-white px-4 py-2 rounded-md border border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+    >
+      <option value="">Select Repository</option>
+      {repos.map(repo => (
+        <option key={repo._id} value={repo._id}>
+          {repo.name}
+        </option>
+      ))}
+    </select>
+  )}
+  <h1 className="text-3xl font-bold">
+    {viewMode === 'repo' 
+      ? (currentRepo ? `${currentRepo.name} Tasks` : 'Repository Tasks')
+      : 'My Tasks'}
+  </h1>
+</div>
+
+
+    <div className="flex gap-2 bg-slate-700 p-1 rounded-lg">
+      <button
+        onClick={() => handleViewModeChange('repo')}
+        className={`px-4 py-2 rounded-md ${
+          viewMode === 'repo' ? 'bg-blue-600' : 'hover:bg-slate-600'
+        }`}
+      >
+        Repository Tasks
+      </button>
+      <button
+        onClick={() => handleViewModeChange('user')}
+        className={`px-4 py-2 rounded-md ${
+          viewMode === 'user' ? 'bg-blue-600' : 'hover:bg-slate-600'
+        }`}
+      >
+        My Tasks
+      </button>
+    </div>
+  </div>
+  
+  {viewMode === 'repo' && currentRepo && (
+    <div className="flex items-center gap-4">
+      <button
+        onClick={() => setShowCreateModal(true)}
+        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+      >
+        New Task +
+      </button>
+      <button 
+        onClick={() => syncWithGitea(currentRepo._id)}
+        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+      >
+        Sync with Gitea
+      </button>
+    </div>
+  )}
+</div>
+
+          {currentRepo || viewMode === 'user' ? (
+  <DragDropContext onDragEnd={handleDragEnd}>
+    <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      {statuses.map(status => (
+        <Droppable key={status} droppableId={status}>
+          {(provided) => (
+            <div
+              {...provided.droppableProps}
+              ref={provided.innerRef}
+              className="bg-slate-700 p-4 rounded-lg shadow-lg"
             >
-              <PencilIcon className="h-5 w-5 text-gray-600" />
-            </motion.button>
-          </div>
+              <h3 className="text-lg font-semibold mb-4">
+                {statusLabels[status]}
+                <span className="ml-2 text-sm text-slate-300">
+                  {viewMode === 'repo'
+                    ? (board?.columns[status]?.length || 0)
+                    : filteredTasks.filter(t => t.status === status).length}
+                </span>
+              </h3>
 
-          {/* Status Bar */}
-          <motion.div 
-            variants={itemVariants}
-            className="flex flex-wrap gap-4 items-center"
-          >
-            <div className="flex items-center gap-2 bg-blue-100 px-3 py-1 rounded-full">
-              <CheckCircleIcon className="h-5 w-5 text-blue-600" />
-              <select 
-                value={task.status}
-                onChange={(e) => setTask({ ...task, status: e.target.value })}
-                className="bg-transparent outline-none capitalize"
-              >
-                {['todo', 'in-progress', 'done'].map(option => (
-                  <option key={option} value={option}>{option}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex items-center gap-2 bg-red-100 px-3 py-1 rounded-full">
-              <TagIcon className="h-5 w-5 text-red-600" />
-              <select
-                value={task.priority}
-                onChange={(e) => setTask({ ...task, priority: e.target.value })}
-                className="bg-transparent outline-none capitalize"
-              >
-                {['low', 'medium', 'high'].map(option => (
-                  <option key={option} value={option}>{option}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex items-center gap-2 bg-purple-100 px-3 py-1 rounded-full">
-              <CalendarIcon className="h-5 w-5 text-purple-600" />
-              <input
-                type="date"
-                value={task.dueDate}
-                onChange={(e) => setTask({ ...task, dueDate: e.target.value })}
-                className="bg-transparent outline-none"
-              />
-            </div>
-          </motion.div>
-        </motion.div>
-
-        {/* Main Content */}
-        <div className="grid md:grid-cols-3 gap-8 p-6">
-          {/* Left Column */}
-          <div className="md:col-span-2 space-y-8">
-            {/* Description */}
-            <motion.div 
-              variants={itemVariants}
-              className="space-y-4"
-            >
-              <div className="flex items-center gap-2 text-lg font-semibold">
-                <ChatBubbleLeftIcon className="h-5 w-5" />
-                Description
-              </div>
-              {isEditing ? (
-                <textarea
-                  value={task.description}
-                  onChange={(e) => setTask({ ...task, description: e.target.value })}
-                  className="w-full p-3 border rounded-lg min-h-[120px]"
-                />
-              ) : (
-                <p className="text-gray-600 whitespace-pre-wrap">
-                  {task.description}
-                </p>
-              )}
-            </motion.div>
-
-            {/* Comments */}
-            <motion.div 
-              variants={itemVariants}
-              className="space-y-6"
-            >
-              <div className="flex items-center gap-2 text-lg font-semibold">
-                <ChatBubbleLeftIcon className="h-5 w-5" />
-                Comments ({task.comments.length})
-              </div>
-              
-              <div className="space-y-4">
-                {task.comments.map(comment => (
-                  <div key={comment.id} className="flex gap-3">
-                    <UserCircleIcon className="h-8 w-8 text-gray-400" />
-                    <div className="flex-1 bg-gray-50 p-4 rounded-lg">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="font-medium">{comment.user}</span>
-                        <span className="text-sm text-gray-500">{comment.timestamp}</span>
+              {viewMode === 'repo' ? (
+                // Repository View - Use board columns directly
+                (board?.columns[status] || []).map((task, index) => (
+                  <Draggable 
+                    key={task._id} 
+                    draggableId={task._id} 
+                    index={index}
+                  >
+                    {(provided) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        {...provided.dragHandleProps}
+                      >
+                        <TaskCard 
+                          task={task} 
+                          onClick={setSelectedTask}
+                          showRepo={false}
+                        />
                       </div>
-                      <p className="text-gray-700">{comment.text}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex gap-3">
-                <UserCircleIcon className="h-8 w-8 text-gray-400" />
-                <input 
-                  type="text" 
-                  placeholder="Add a comment..."
-                  className="flex-1 p-3 border rounded-lg focus:outline-blue-500"
-                />
-              </div>
-            </motion.div>
-          </div>
-
-          {/* Right Column */}
-          <div className="space-y-8">
-            {/* Details */}
-            <motion.div 
-              variants={itemVariants}
-              className="space-y-4"
-            >
-              <div className="text-lg font-semibold">Details</div>
-              
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <UserCircleIcon className="h-5 w-5 text-gray-500" />
-                  <span className="font-medium">Assigned to:</span>
-                  <div className="flex-1 flex items-center gap-1">
-                    {task.assignees.map((assignee, index) => (
-                      <span 
-                        key={index}
-                        className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
-                      >
-                        {assignee}
-                      </span>
-                    ))}
-                    <ChevronUpDownIcon className="h-4 w-4 cursor-pointer" />
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <TagIcon className="h-5 w-5 text-gray-500" />
-                  <span className="font-medium">Labels:</span>
-                  <div className="flex-1 flex flex-wrap gap-1">
-                    {task.labels.map((label, index) => (
-                      <span
-                        key={index}
-                        className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-sm"
-                      >
-                        {label}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <PaperClipIcon className="h-5 w-5 text-gray-500" />
-                  <span className="font-medium">Attachments:</span>
-                  <div className="flex items-center gap-1 text-blue-600">
-                    {task.attachments.map((file, index) => (
-                      <span key={index} className="cursor-pointer hover:underline">
-                        {file}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Activity Log */}
-            <motion.div 
-              variants={itemVariants}
-              className="space-y-4"
-            >
-              <div className="text-lg font-semibold">Activity</div>
-              <div className="space-y-3">
-                {task.activity.map((activity, index) => (
-                  <div key={index} className="flex gap-3">
-                    <div className="flex flex-col items-center">
-                      <div className="w-2 h-2 bg-gray-400 rounded-full" />
-                      {index !== task.activity.length - 1 && (
-                        <div className="w-px h-6 bg-gray-200 my-1" />
+                    )}
+                  </Draggable>
+                ))
+              ) : (
+                // User View - Use filtered tasks
+                filteredTasks
+                  .filter(t => t.status === status)
+                  .map((task, index) => (
+                    <Draggable 
+                      key={task._id} 
+                      draggableId={task._id} 
+                      index={index}
+                    >
+                      {(provided) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          {...provided.dragHandleProps}
+                        >
+                          <TaskCard 
+                            task={task} 
+                            onClick={setSelectedTask}
+                            showRepo={true}
+                          />
+                        </div>
                       )}
-                    </div>
-                    <div>
-                      <p className="text-gray-700">{activity.text}</p>
-                      <p className="text-sm text-gray-500">{activity.timestamp}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-          </div>
+                    </Draggable>
+                  ))
+              )}
+              {provided.placeholder}
+            </div>
+          )}
+        </Droppable>
+      ))}
+    </div>
+  </DragDropContext>
+) : (
+  <div className="text-center py-20">
+    <p className="text-xl text-slate-400">
+      Select a repository to view its tasks
+    </p>
+  </div>
+)}
         </div>
-      </div>
+      </main>
+
+      <TaskDetailsModal
+        task={selectedTask}
+        onClose={() => setSelectedTask(null)}
+        onUpdate={handleTaskUpdate}
+        collaborators={collaborators}
+      />
+
+      <CreateTaskModal
+        visible={showCreateModal}
+        currentRepo={currentRepo}
+          collaborators={collaborators}
+         onCreate={handleCreateTask}
+         onCancel={() => setShowCreateModal(false)}
+      />
+
+      <Toaster position="bottom-right" />
     </motion.div>
   );
 };
 
-export default TaskView;
-
-// // src/pages/TasksPage.js
-// import React, { useState, useEffect } from "react";
-// import { motion } from "framer-motion";
-// import { FaTasks, FaPlus, FaFilter, FaSearch } from "react-icons/fa";
-// import { useParams } from "react-router-dom";
-// import { DndProvider } from "react-dnd";
-// import { HTML5Backend } from "react-dnd-html5-backend";
-// import Sidebar from "../components/sidebar";
-// import UserNavbar from "../components/UserNavbar";
-// import KanbanBoard from "../components/KanbanBoard";
-// import TaskForm from "../components/TaskForm";
-// import { useTasks } from "../context/TaskContext";
-// import TaskFilters from "../components/TaskFilters";
-
-// const TasksPage = () => {
-//   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-//   const [showTaskForm, setShowTaskForm] = useState(false);
-//   const [filters, setFilters] = useState({ 
-//     status: "", 
-//     priority: "", 
-//     assignee: "",
-//     search: ""
-//   });
-//   const { repoId } = useParams();
-//   const { tasks, fetchTasks } = useTasks();
-
-//   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
-
-//   useEffect(() => {
-//     if (repoId) fetchTasks(repoId);
-//   }, [repoId]);
-
-//   const filteredTasks = tasks.filter(task => {
-//     const matchesSearch = task.title.toLowerCase().includes(filters.search.toLowerCase()) ||
-//       task.description?.toLowerCase().includes(filters.search.toLowerCase());
-    
-//     return (
-//       (filters.status ? task.status === filters.status : true) &&
-//       (filters.priority ? task.priority === filters.priority : true) &&
-//       (filters.assignee ? task.assignee?._id === filters.assignee : true) &&
-//       matchesSearch
-//     );
-//   });
-
-//   return (
-//     <motion.div
-//       className="min-h-screen  w-full bg-gradient-to-b from-slate-900 to-slate-800 text-white
-//                      w-screen mx-[-20px] mb-[-20px] px-[20px] pb-[20px] overflow-x-hidden"
-//       initial={{ opacity: 0 }}
-//       animate={{ opacity: 1 }}
-//     >
-//       <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/dark-stripes.png')] opacity-20" />
-      
-//       <UserNavbar toggleSidebar={toggleSidebar} isSidebarOpen={isSidebarOpen} />
-//       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-      
-//       <main className="ml-0 transition-all duration-300 lg:ml-64 pt-16 min-h-screen">
-//         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-//           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-//             <motion.h1 
-//               initial={{ x: -20 }}
-//               animate={{ x: 0 }}
-//               className="text-3xl font-bold flex items-center gap-3"
-//             >
-//               <FaTasks className="text-blue-400 text-4xl" />
-//               <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-//                 Project Tasks
-//               </span>
-//             </motion.h1>
-            
-//             <motion.button
-//               whileHover={{ scale: 1.05 }}
-//               whileTap={{ scale: 0.95 }}
-//               className="bg-blue-600 hover:bg-blue-500 px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg"
-//               onClick={() => setShowTaskForm(true)}
-//             >
-//               <FaPlus className="text-lg" />
-//               Create New Task
-//             </motion.button>
-//           </div>
-
-//           <TaskFilters filters={filters} setFilters={setFilters} />
-          
-//           <motion.div 
-//             initial={{ opacity: 0 }}
-//             animate={{ opacity: 1 }}
-//             className="mt-8"
-//           >
-//             {tasks.length === 0 ? (
-//               <div className="text-center py-12 text-gray-400 text-xl">
-//                 🎉 No tasks found! Start by creating your first task.
-//               </div>
-//             ) : (
-//               <DndProvider backend={HTML5Backend}>
-//                 <KanbanBoard tasks={filteredTasks} />
-//               </DndProvider>
-//             )}
-//           </motion.div>
-//         </div>
-
-//         {showTaskForm && (
-//           <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
-//             <motion.div
-//               initial={{ opacity: 0, y: 20 }}
-//               animate={{ opacity: 1, y: 0 }}
-//               className="bg-slate-800 p-6 rounded-xl w-full max-w-2xl mx-4 border border-slate-700 shadow-2xl"
-//             >
-//               <TaskForm 
-//                 onClose={() => setShowTaskForm(false)}
-//                 repoId={repoId}
-//               />
-//             </motion.div>
-//           </div>
-//         )}
-//       </main>
-//     </motion.div>
-//   );
-// };
-
-// export default TasksPage;
+export default TasksPage;

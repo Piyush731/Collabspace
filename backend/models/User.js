@@ -9,7 +9,19 @@ const userSchema = new mongoose.Schema( {
   giteaToken: String,
   jiraIdentity: { accountId: { type: String }, displayName: String, active: Boolean },
   userType: {  type: String, default: "free", enum: ["free", "premium", "admin"]},
-  createdAt: { type: Date, default: Date.now}
+  notificationPreferences: { type: String, enum: ["Instant", "Daily Digest", "Weekly Summary"], default: "Instant" },
+  themePreference: { type: String, enum: ["Dark", "Light"], default: "Dark" },
+  createdAt: { type: Date, default: Date.now},
+  notifications: [{
+  type: {
+    type: String,
+    enum: ['assignment', 'mention', 'due-date']
+  },
+  task: { type: mongoose.Schema.Types.ObjectId, ref: 'Task' },
+  message: String,
+  read: { type: Boolean, default: false },
+  createdAt: { type: Date, default: Date.now }
+}]
 });
 
 // Add to User schema methods:

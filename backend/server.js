@@ -10,6 +10,9 @@ const gitRoutes = require("./routes/gitRoutes");
 const messageRoutes = require("./routes/messageRoutes");
 const uploadRoutes = require("./routes/uploadRoutes");
 const jiraRoutes = require('./routes/jiraRoutes');
+const taskRoutes = require('./routes/taskRoutes');
+const boardRoutes = require('./routes/boardRoutes');
+const searchRoutes = require('./routes/searchRoutes');
 const initializeSocket = require("./config/socket") 
 const multer = require('multer');
 const upload = multer({ dest: 'uploads/' });
@@ -35,6 +38,9 @@ app.use("/api/repos", gitRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/jira", jiraRoutes);
+app.use("/api/tasks", taskRoutes);
+app.use("api/board",boardRoutes)
+app.use("/api/search", searchRoutes);
 app.use("/uploads", express.static("uploads"));
 app.get("/", (req, res) => {
   res.send("Backend is running!");
@@ -69,8 +75,7 @@ mongoose.connection.on("disconnected", () => {
 
 
 const server = http.createServer(app); 
-initializeSocket(server); 
-
+initializeSocket(server);
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
