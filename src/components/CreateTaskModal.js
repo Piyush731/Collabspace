@@ -17,7 +17,15 @@ const CreateTaskModal = ({
     labels: []
   });
 
-  const availableLabels = ['Bug', 'Feature', 'Improvement', 'Authentication', 'Security'];
+  const availableLabels = [
+  'Bug', 
+  'Feature', 
+  'Authentication', 
+  'Security',
+  'Backend', 
+  'Frontend',
+  'Improvement' // Only include if added to backend enum
+];
 
   const handleChange = (e) => {
     const { name, value } = e.target;

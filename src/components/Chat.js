@@ -7,20 +7,20 @@ import API_URL from "../config";
 
 const ChatModal = ({ repoId, showChat }) => {
   const { user } = useAuth();
-  const socket = useSocket();
+  const  { chatSocket } = useSocket();
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [isExpanded, setIsExpanded] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   useEffect(() => {
-    if (!socket || !repoId) {
+    if (!chatSocket || !repoId) {
       console.warn("Socket or repoId is missing, cannot join room.");
       return;
     }
 
     console.log(`Joining chat for repository: ${repoId}`);
-    socket.emit("join-repo", repoId);
+    chatSocket.emit("join-repo", repoId);
 
     const handleNewMessage = (message) => {
       console.log("Received new message:", message);
@@ -46,26 +46,26 @@ const ChatModal = ({ repoId, showChat }) => {
       }
     };
 
-    socket.on("new-message", handleNewMessage);
+    chatSocket.on("new-message", handleNewMessage);
     fetchMessages();
 
     return () => {
       console.log(`Leaving chat room: ${repoId}`);
-      socket.off("new-message", handleNewMessage);
-      socket.emit("leave-repo", repoId);
+      chatSocket.off("new-message", handleNewMessage);
+      chatSocket.emit("leave-repo", repoId);
     };
-  }, [socket, repoId]);
+  }, [chatSocket, repoId]);
 
   // Handle message send
   const sendMessage = () => {
-    if (!socket || !newMessage.trim() || !repoId) {
+    if (!chatSocket || !newMessage.trim() || !repoId) {
       console.warn("Cannot send message: Missing socket, repoId, or message.");
       return;
     }
 
     console.log("Sending message:", { repoId, content: newMessage });
 
-    socket.emit("send-message", {
+    chatSocket.emit("send-message", {
       repoId,
       content: newMessage,
     });
@@ -93,7 +93,7 @@ const ChatModal = ({ repoId, showChat }) => {
       const data = await res.json();
 
       if (data.url) {
-        socket.emit("send-message", {
+        chatSocket.emit("send-message", {
           repoId,
           content: `<img src="${data.url}" alt="Uploaded Image" class="max-w-full rounded-lg" />`,
         });

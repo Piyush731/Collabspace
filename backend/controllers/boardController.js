@@ -2,52 +2,118 @@
 const Board = require('../models/Board');
 const Task = require('../models/Task'); // Import Task model
 const Repository = require('../models/Repository');
+const mongoose = require('mongoose');
 
 exports.getBoard = async (req, res) => {
   try {
     const repoId = req.params.repoId;
+     if (!repoId || !mongoose.Types.ObjectId.isValid(repoId)) {
+      return res.status(400).json({ error: 'Invalid repository ID' });
+    }
+
+    // Verify repository exists first
+    const repository = await Repository.findById(repoId);
+    if (!repository) {
+      return res.status(404).json({ error: 'Repository not found from boards' });
+    }
 
     let board = await Board.findOne({ repository: repoId })
       .populate({
         path: 'columns.backlog columns.todo columns.in-progress columns.review columns.done',
         select: '_id title description priority dueDate assignees labels',
-        populate: {
+        populate: [{
           path: 'assignees',
           select: '_id username email'
-        }
+        }, {
+          path: 'repository',
+          select: 'name'
+        }]
       });
 
     if (!board) {
-      // Create board with empty columns
-      board = await Board.create({ repository: repoId });
-      
-      // Find existing tasks for this repo and add to appropriate columns
+      // Create board with properly initialized columns
+      board = await Board.create({ 
+        repository: repoId,
+        columns: {
+          backlog: [],
+          todo: [],
+          'in-progress': [],
+          review: [],
+          done: []
+        }
+      });
+
+      // Find existing tasks and update columns
       const tasks = await Task.find({ repository: repoId });
       
+      const update = {};
+
+      const columns = ['backlog', 'todo', 'in-progress', 'review', 'done'];
+      columns.forEach(col => update[`columns.${col}`] = []);
+
+      tasks.forEach(task => {
+        const status = columns.includes(task.status) ? task.status : 'backlog';
+        update[`columns.${status}`].push(task._id);
+      });
+
+      await Board.findByIdAndUpdate(board._id, update);
+      // Re-fetch with proper population
+      board = await Board.findById(board._id).populate({
+        path: 'columns.backlog columns.todo columns.in-progress columns.review columns.done',
+        select: '_id title description',
+        populate: {
+          path: 'assignees',
+          select: 'username'
+        }
+      });
+    }
+    res.status(200).json(board);
+  } catch (error) {
+    console.error('Error fetching board:', error);
+    res.status(500).json({ 
+      message: 'Error fetching board',
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+};
+
+// Add to boardController.js
+exports.createBoard = async (req, res) => {
+  try {
+    const repoId = req.params.repoId;
+    let board = await Board.findOne({ repository: repoId });
+
+    if (!board) {
+      board = await Board.create({ repository: repoId });
+      // Initialize with existing tasks
+      const tasks = await Task.find({ repository: repoId });
       const columns = tasks.reduce((acc, task) => {
         acc[task.status].push(task._id);
         return acc;
-      }, {
-        backlog: [],
-        todo: [],
-        'in-progress': [],
-        review: [],
-        done: []
-      });
-
+      }, { backlog: [], todo: [], 'in-progress': [], review: [], done: [] });
+      
       board.columns = columns;
       await board.save();
-      await board.populate('columns.backlog columns.todo columns.in-progress columns.review columns.done');
     }
 
     res.status(200).json(board);
   } catch (error) {
-    console.error('Error fetching board:', error);
-    res.status(500).json({ message: 'Error fetching board', error: error.message });
+    res.status(500).json({ error: error.message });
   }
 };
 
 exports.updateColumns = async (req, res) => {
+  if (!req.body.columns || !req.body.activityLog) {
+      return res.status(400).json({ error: 'Invalid update data' });
+    }
+     const moves = req.body.activityLog;
+    const validStatuses = ['backlog', 'todo', 'in-progress', 'review', 'done'];
+    for (const move of moves) {
+      if (!validStatuses.includes(move.to) || !validStatuses.includes(move.from)) {
+        return res.status(400).json({ error: 'Invalid status transition' });
+      }
+    }
   try {
     const board = await Board.findOneAndUpdate(
       { repository: req.params.repoId },
@@ -76,14 +142,23 @@ exports.updateColumns = async (req, res) => {
     req.io.to(`repo-${req.params.repoId}`).emit('board-updated', board);
     res.json(board);
   } catch (err) {
+     console.error('Column update error:', {
+      message: err.message,
+      activityLog: req.body.activityLog,
+      stack: err.stack
+    });
     res.status(500).json({ error: err.message });
   }
 };
 
 
 const fetchGiteaIssues = async (repoId) => {
-  // Implement actual Gitea API call
-  return []; // Replace with real implementation
+   const repo = await Repository.findById(repoId);
+  const response = await axios.get(
+    `${process.env.GITEA_URL}/repos/${repo.owner.username}/${repo.name}/issues`,
+    { headers: { Authorization: `token ${repo.owner.giteaToken}` } }
+  );
+  return response.data;
 };
 
 const mapGiteaState = (state) => {

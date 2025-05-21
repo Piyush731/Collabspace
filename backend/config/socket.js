@@ -153,7 +153,7 @@ module.exports = function initializeSocket(server) {
     });
 
     // Task updates
-    socket.on("task-update", async (update) => {
+    socket.on("taskUpdate", async (update) => {
       try {
         const task = await Task.findByIdAndUpdate(
           update.taskId,

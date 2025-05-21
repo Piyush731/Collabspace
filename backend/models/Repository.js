@@ -9,7 +9,9 @@ const repositorySchema = new mongoose.Schema({
     type: String,
     enum: ['read', 'write', 'admin'],
     default: 'read'
-  }}],
+  }, 
+    default: []
+}],
   defaultBranch: { type: String, default: 'main'},
   files: [{ type: mongoose.Schema.Types.ObjectId, ref: 'File' }], 
   giteaRepoId: { type: Number, required: true }, // Gitea's repository ID

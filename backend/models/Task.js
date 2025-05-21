@@ -19,6 +19,11 @@ const taskSchema = new mongoose.Schema({
     default: 'todo',
     index: true
   },
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
   
   // Gitea Integration
   giteaIssueId: {
@@ -40,18 +45,9 @@ const taskSchema = new mongoose.Schema({
   },
 
   // Team Collaboration
-  assignees: [{
+ assignees: [{
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    validate: {
-      validator: async function(users) {
-        const repo = await mongoose.model('Repository').findById(this.repository)
-          .select('collaborators');
-        return users.every(userId => 
-          repo.collaborators.some(c => c.user.equals(userId))
-        )},
-      message: 'Assignees must be repository collaborators'
-    }
+    ref: 'User'
   }],
 
   // Workflow Tracking
@@ -69,7 +65,7 @@ const taskSchema = new mongoose.Schema({
   // Content Management
   labels: [{
     type: String,
-    enum: ['Authentication', 'Security', 'Backend', 'Frontend', 'Bug', 'Feature']
+    enum: ['Authentication', 'Security', 'Backend', 'Frontend', 'Bug', 'Feature', 'Improvement']
   }],
   attachments: [{
     name: String,
@@ -102,11 +98,49 @@ const taskSchema = new mongoose.Schema({
 }, { 
   timestamps: true,
   toJSON: { virtuals: true },
-  toObject: { virtuals: true }
+  toObject: { virtuals: true },
+   validateBeforeSave: true 
+});
+
+taskSchema.path('assignees').validate({
+  validator: async function(assignees) {
+    const repo = await mongoose.model('Repository').findById(this.repository)
+      .select('collaborators owner');
+    
+    // Allow owner even if not in collaborators
+    const validUsers = [
+      ...repo.collaborators.map(c => c.user), 
+      repo.owner
+    ];
+    
+    return assignees.every(userId => 
+      validUsers.some(u => u.equals(userId))
+    );
+  },
+  message: 'Assignees must be repository owner or collaborators'
 });
 
 // Indexes for common queries
+taskSchema.index({ assignees: 1, status: 1 });
 taskSchema.index({ repository: 1, status: 1 });
-taskSchema.index({ assignees: 1, dueDate: 1 });
+taskSchema.index({ dueDate: 1 });
+
+
+taskSchema.virtual('previousStatus').get(function() {
+  return this._previousStatus;
+});
+
+// With this working version:
+taskSchema.pre('save', function(next) {
+  if (this.isModified('status')) {
+    this._previousStatus = this._originalStatus;
+  }
+  next();
+});
+
+taskSchema.pre('save', function(next) {
+  this._originalStatus = this.status;
+  next();
+});
 
 module.exports = mongoose.model('Task', taskSchema);

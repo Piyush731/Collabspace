@@ -38,13 +38,22 @@ app.use("/api/repos", gitRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/jira", jiraRoutes);
-app.use("/api/tasks", taskRoutes);
-app.use("api/board",boardRoutes)
+app.use("/api/repos", taskRoutes);
+app.use("/api/repos",boardRoutes)
 app.use("/api/search", searchRoutes);
 app.use("/uploads", express.static("uploads"));
 app.get("/", (req, res) => {
   res.send("Backend is running!");
 }); 
+
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({
+    error: process.env.NODE_ENV === 'production' 
+      ? 'Internal server error' 
+      : err.message
+  });
+});
 
 
 app.post('/api/upload', upload.single('image'), (req, res) => {

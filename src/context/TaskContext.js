@@ -1,4 +1,5 @@
-import { createContext, useContext, useReducer, useEffect } from 'react';
+// Add at the top with other imports
+import { produce } from 'immer';import { createContext, useContext, useReducer, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import { useAuth } from './AuthContext';
@@ -13,35 +14,92 @@ const taskReducer = (state, action) => {
       return { ...state, board: action.payload };
     case 'SET_REPOS':
       return { ...state, repos: action.payload };
+    case 'SET_TASKS':
+      return { ...state, tasks: action.payload };
     case 'SET_CURRENT_REPO':
       return { ...state, currentRepo: action.payload };
-    case 'UPDATE_TASK':
-      return {
-        ...state,
-        board: {
-          ...state.board,
-          columns: {
-            ...state.board.columns,
-            [action.payload.status]: state.board.columns[action.payload.status].map(task =>
-              task._id === action.payload._id ? action.payload : task
-            )
+    // Optimize task updates with shallow comparison
+case 'UPDATE_TASK':
+      return produce(state, draft => {
+        // Find the task in all columns
+        Object.entries(draft.board.columns).forEach(([columnName, tasks]) => {
+          const taskIndex = tasks.findIndex(t => t._id === action.payload._id);
+          if (taskIndex > -1) {
+            draft.board.columns[columnName][taskIndex] = {
+              ...tasks[taskIndex],
+              ...action.payload
+            };
           }
-        }
-      };
-    case 'ADD_TASK':
-        return {
+        });
+      });
+    case 'ADD_TASK': {
+  const statusToAdd = action.payload.status || 'todo'; // Default to 'todo'
+  
+  const currentBoard = state.board || {
+    columns: {
+      backlog: [],
+      todo: [],
+      'in-progress': [],
+      review: [],
+      done: []
+    }
+  };
+
+  return {
     ...state,
     board: {
-      ...state.board,
+      ...currentBoard,
       columns: {
-        ...state.board.columns,
-        [action.payload.status]: [
-          ...state.board.columns[action.payload.status],
-          action.payload
+        ...currentBoard.columns,
+        [statusToAdd]: [
+          action.payload,
+          ...(currentBoard.columns[statusToAdd] || [])
         ]
       }
     }
-      };
+  };
+}
+ case 'REMOVE_TASK':
+  const newColumns = { ...state.board.columns };
+  Object.keys(newColumns).forEach(col => {
+    newColumns[col] = newColumns[col].filter(t => t._id !== action.payload._id);
+  });
+  return {
+    ...state,
+    board: {
+      ...state.board,
+      columns: newColumns
+    }
+  };
+
+   case 'MOVE_TASK': {
+  if (!action.payload.from || !action.payload.to) {
+    console.error('Invalid move action:', action);
+    return state;
+  }
+  
+  const newColumns = JSON.parse(JSON.stringify(state.board?.columns || {
+    backlog: [], todo: [], 'in-progress': [], review: [], done: []
+  }));
+
+  // Remove from all columns
+  Object.keys(newColumns).forEach(col => {
+    newColumns[col] = newColumns[col].filter(t => t._id !== action.payload.task._id);
+  });
+
+  // Add to new column
+  if (newColumns[action.payload.to]) {
+    newColumns[action.payload.to].unshift(action.payload.task);
+  }
+
+  return {
+    ...state,
+    board: {
+      ...state.board,
+      columns: newColumns
+    }
+  };
+}
     default:
       return state;
   }
@@ -51,11 +109,12 @@ export const TaskProvider = ({ children }) => {
   const [state, dispatch] = useReducer(taskReducer, {
     board: null,
     repos: [],
+    tasks: [],
     currentRepo: null
   });
   
   const { user } = useAuth();
-  const socket = useSocket();
+  const { taskSocket } = useSocket();
 
   const fetchBoard = async (repoId) => {
     try {
@@ -64,6 +123,7 @@ export const TaskProvider = ({ children }) => {
       });
       dispatch({ type: 'SET_BOARD', payload: res.data });
     } catch (err) {
+      toast.error('Failed to load board: ' + (err.response?.data?.error || err.message));
       console.error('Error fetching board:', err);
     }
   };
@@ -74,10 +134,11 @@ export const TaskProvider = ({ children }) => {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     });
     dispatch({ type: 'SET_REPOS', payload: res.data });
-    return res.data; // Add return statement
+    return res.data; 
   } catch (err) {
     console.error('Error fetching repos:', err);
-    throw err; // Propagate error
+     toast.error('Failed to load repositories: ' + (err.response?.data?.error || err.message));
+    throw err;
   }
 };
 
@@ -112,20 +173,27 @@ const syncWithGitea = async (repoId) => {
   }
 };
 
-  useEffect(() => {
-         if (socket) {
-             socket.on('taskUpdate', (update) => {
-                 // Dispatch the task to reducer to update the state
-                 dispatch({type: 'UPDATE_TASK', payload: update})
-             })
-         }
-
-         return () => {
-             if (socket) {
-                 socket.off('taskUpdate')
-             }
-         }
-     }, [socket])
+ // Modify socket listener
+useEffect(() => {
+  if (taskSocket) {
+    taskSocket.on('taskUpdate', (update) => {
+      if (update.action === 'move') {
+        if (!update.from || !update.to) {
+          console.error('Invalid move event:', update);
+          return;
+        }
+        dispatch({
+          type: 'MOVE_TASK',
+          payload: {
+            task: update.task,
+            from: update.from,
+            to: update.to
+          }
+        });
+      }
+    });
+  }
+}, [taskSocket]);
 
   useEffect(() => {
     if (user) {
@@ -136,6 +204,7 @@ const syncWithGitea = async (repoId) => {
   return (
     <TaskContext.Provider value={{
       ...state,
+      fetchRepos,
       fetchBoard,
       createTask,
       syncWithGitea,

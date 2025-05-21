@@ -13,6 +13,7 @@ const boardSchema = new mongoose.Schema({
     backlog: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Task',
+      default: [],
       validate: [arrayLimit, '{PATH} exceeds 100 task limit'],
       index: true
     }],
@@ -20,21 +21,22 @@ const boardSchema = new mongoose.Schema({
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Task',
       validate: [arrayLimit, '{PATH} exceeds 100 task limit']
+      , default: []
     }],
     'in-progress': [{
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Task',
-      validate: [arrayLimit, '{PATH} exceeds 100 task limit']
+      validate: [arrayLimit, '{PATH} exceeds 100 task limit'], default: []
     }],
     review: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Task',
-      validate: [arrayLimit, '{PATH} exceeds 100 task limit']
+      validate: [arrayLimit, '{PATH} exceeds 100 task limit'], default: []
     }],
     done: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Task',
-      validate: [arrayLimit, '{PATH} exceeds 100 task limit']
+      validate: [arrayLimit, '{PATH} exceeds 100 task limit'], default: []
     }]
   },
 

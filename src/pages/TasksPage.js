@@ -29,11 +29,13 @@ const TasksPage = () => {
     board,
     repos,
     fetchTasks,
+    dispatch,
     currentRepo,
     setCurrentRepo,
     fetchBoard,
     createTask,
-    syncWithGitea
+    syncWithGitea,
+    getUserTasks
   } = useTask();
   const [viewMode, setViewMode] = useState('repo');
   const [selectedRepo, setSelectedRepo] = useState(null);
@@ -82,6 +84,7 @@ const filteredTasks = useMemo(() => {
           });
           setCollaborators(res.data);
         } catch (error) {
+           console.error('collab loading error:', error.response?.data || error.message);
           toast.error('Failed to load collaborators');
         }
       }
@@ -94,72 +97,87 @@ const filteredTasks = useMemo(() => {
     try {
       await fetchRepos();
       if (viewMode === 'user') {
-        const userTasks = await axios.get(`${API_URL}/api/tasks/user/${user._id}`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
-        setTasks(userTasks.data);
+        const data = await getUserTasks(user._id);
+        setTasks(data);
+      }
+      else if (currentRepo) {
+        await fetchBoard(currentRepo._id);
       }
     } catch (error) {
-      toast.error('Failed to load data');
+         console.error('Data loading error:', error.response?.data || error.message);
+    toast.error('Failed to load data');
     }
   };
   loadData();
-}, [viewMode]);
+}, [viewMode, currentRepo]);
 
 const handleViewModeChange = (mode) => {
   setViewMode(mode);
   setCurrentRepo(null);
 };
 
-  const handleRepoSelect = async (repo) => {
-    setSelectedRepo(repo);
+  const handleRepoSelect = async (repoId) => {
     try {
-      const data = await fetchTasks(repo.id);
-      setTasks(data);
-    } catch (error) {
-      toast.error('Failed to load tasks');
+    const repo = repos.find(r => r._id === repoId);
+    setCurrentRepo(repo);
+    if (repo) {
+      await fetchBoard(repo._id);
     }
-  };
-
-  const handleStatusChange = async (taskId, newStatus) => {
-  try {
-    await axios.patch(`${API_URL}/api/tasks/${taskId}/status`, { status: newStatus }, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-    });
-    // Update local state or refetch data
   } catch (error) {
-    toast.error('Failed to update task status');
+     console.error('Repo loading error:', error.response?.data || error.message);
+    toast.error('Failed to load repository data');
   }
 };
 
-  const handleDragEnd = async (result) => {
+const handleDragEnd = async (result) => {
   const { source, destination, draggableId } = result;
-  if (!destination || (viewMode === 'repo' && !currentRepo)) return;
+  
+  // 1. Validate destination
+  if (!destination || !statuses.includes(destination.droppableId)) {
+    toast.error('Invalid drop location');
+    return;
+  }
+
+  // 2. Validate repository context
+  const repoId = viewMode === 'repo' 
+    ? currentRepo?._id 
+    : tasks.find(t => t._id === draggableId)?.repository?._id;
+  
+  if (!repoId) {
+    toast.error('Invalid repository context');
+    return;
+  }
 
   try {
-    const task = viewMode === 'repo' 
-      ? board.columns[source.droppableId].find(t => t._id === draggableId)
-      : tasks.find(t => t._id === draggableId);
+    // 3. Make API call
+    const response = await axios.patch(
+      `${API_URL}/api/repos/tasks/${draggableId}/status`,
+      {
+        status: destination.droppableId,
+        repositoryId: repoId
+      },
+      { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }}
+    );
 
-    // Single API call
-    await axios.patch(`${API_URL}/api/tasks/${draggableId}/status`, {
-      status: destination.droppableId,
-      repositoryId: viewMode === 'user' ? task.repository?._id : currentRepo?._id
-    }, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    // 4. Validate response format
+    if (!response.data?.from || !response.data?.to) {
+      throw new Error('Invalid server response');
+    }
+
+    // 5. Update UI
+    dispatch({
+      type: 'MOVE_TASK',
+      payload: {
+        task: response.data.task,
+        from: response.data.from,
+        to: response.data.to
+      }
     });
 
-    // Update state
-    if (viewMode === 'repo') {
-      fetchBoard(currentRepo._id);
-    } else {
-      const updatedTasks = tasks.map(t => 
-        t._id === draggableId ? {...t, status: destination.droppableId} : t
-      );
-      setTasks(updatedTasks);
-    }
   } catch (err) {
-    toast.error('Failed to update task status');
+    console.error('Drag error:', err);
+    toast.error(err.response?.data?.error || 'Failed to move task');
+    if (viewMode === 'repo') fetchBoard(currentRepo._id); // Revert UI
   }
 };
 
@@ -174,6 +192,7 @@ const handleViewModeChange = (mode) => {
     toast.success('Task created successfully!');
     fetchBoard(currentRepo._id); // Refresh board data
   } catch (error) {
+     console.error('create task error:', error.response?.data || error.message);
     toast.error(error.message || 'Failed to create task');
   }
 };
@@ -209,19 +228,17 @@ const handleViewModeChange = (mode) => {
   {viewMode === 'repo' && (
     <select 
       value={currentRepo?._id || ''}
-      onChange={(e) => {
-        const repo = repos.find(r => r._id === e.target.value);
-        setCurrentRepo(repo);
-        if (repo) fetchBoard(repo._id);
-      }}
+      onChange={(e) => handleRepoSelect(e.target.value)}
       className="bg-slate-700 text-white px-4 py-2 rounded-md border border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
     >
       <option value="">Select Repository</option>
-      {repos.map(repo => (
+      
+      {repos.map(repo => 
         <option key={repo._id} value={repo._id}>
           {repo.name}
         </option>
-      ))}
+      )}
+
     </select>
   )}
   <h1 className="text-3xl font-bold">
@@ -273,8 +290,8 @@ const handleViewModeChange = (mode) => {
           {currentRepo || viewMode === 'user' ? (
   <DragDropContext onDragEnd={handleDragEnd}>
     <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-      {statuses.map(status => (
-        <Droppable key={status} droppableId={status}>
+      {statuses.map(columnStatus => (
+        <Droppable key={columnStatus} droppableId={columnStatus}>
           {(provided) => (
             <div
               {...provided.droppableProps}
@@ -282,17 +299,24 @@ const handleViewModeChange = (mode) => {
               className="bg-slate-700 p-4 rounded-lg shadow-lg"
             >
               <h3 className="text-lg font-semibold mb-4">
-                {statusLabels[status]}
+                {statusLabels[columnStatus]}
                 <span className="ml-2 text-sm text-slate-300">
                   {viewMode === 'repo'
-                    ? (board?.columns[status]?.length || 0)
-                    : filteredTasks.filter(t => t.status === status).length}
+                    ? (board?.columns[columnStatus]?.length || 0)
+                    : filteredTasks.filter(t => t.status === columnStatus).length}
                 </span>
               </h3>
 
+               {/* Empty state message inside the column */}
+                        {(board?.columns[columnStatus]?.length || 0) === 0 && (
+                          <div className="text-slate-400 text-sm text-center py-4">
+                            No tasks in this column
+                          </div>
+                        )}
+
               {viewMode === 'repo' ? (
                 // Repository View - Use board columns directly
-                (board?.columns[status] || []).map((task, index) => (
+                (board?.columns[columnStatus] || []).map((task, index) => (
                   <Draggable 
                     key={task._id} 
                     draggableId={task._id} 
@@ -316,7 +340,7 @@ const handleViewModeChange = (mode) => {
               ) : (
                 // User View - Use filtered tasks
                 filteredTasks
-                  .filter(t => t.status === status)
+                  .filter(t => t.status === columnStatus)
                   .map((task, index) => (
                     <Draggable 
                       key={task._id} 
@@ -349,7 +373,9 @@ const handleViewModeChange = (mode) => {
 ) : (
   <div className="text-center py-20">
     <p className="text-xl text-slate-400">
-      Select a repository to view its tasks
+     {repos.length === 0 
+        ? 'No repositories available. Create one first!'
+        : 'Select a repository to view its tasks'}
     </p>
   </div>
 )}
