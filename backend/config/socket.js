@@ -8,8 +8,8 @@ const typingUsers = new Map();
 module.exports = function initializeSocket(server) {
   const io = new Server(server, {
     cors: {
-      origin: ["http://localhost:3000"],
-      //origin: ["https://collabspace-one.vercel.app"],
+      //origin: ["http://localhost:3000"],
+      origin: ["https://collabspace-one.vercel.app"],
       methods: ["GET", "POST"],
       credentials: true,
     },
