@@ -21,8 +21,8 @@ const app = express();
 app.options("*", cors());
 app.use(
   cors({
-    origin: ["http://localhost:3000"],
-    //origin: "https://collabspace-one.vercel.app",
+    // origin: ["http://localhost:3000"],
+    origin: "https://collabspace-one.vercel.app",
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true, // If you need cookies or authentication headers
