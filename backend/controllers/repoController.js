@@ -198,15 +198,39 @@ exports.getRepoContents = async (req, res) => {
       headers: { Authorization: `token ${owner.giteaToken}` }
     });
 
-    const contents = response.data.map(item => ({
-      name: item.name,
-      path: path ? `${path}/${item.name}` : item.name,
-      type: item.type,
-      size: item.size,
-      sha: item.sha,
-      html_url: item.html_url,
-      parentPath: path
-    }));
+    const contents = await Promise.all(
+      response.data.map(async (item) => {
+        let decodedContent = null;
+        let encoding = null;
+
+        if (item.type === "file") {
+          const fileRes = await axios.get(
+            `${process.env.GITEA_URL}/api/v1/repos/${owner.username}/${repo.name}/contents/${item.path}?ref=${branch}`,
+            { headers: { Authorization: `token ${owner.giteaToken}` } }
+          );
+
+          if (fileRes.data && fileRes.data.encoding === "base64") {
+            decodedContent = Buffer.from(
+              fileRes.data.content,
+              "base64"
+            ).toString();
+            encoding = "utf-8";
+          }
+        }
+
+        return {
+          name: item.name,
+          path: path ? `${path}/${item.name}` : item.name,
+          type: item.type,
+          size: item.size,
+          sha: item.sha,
+          html_url: item.html_url,
+          parentPath: path,
+          content: decodedContent,
+          encoding: encoding,
+        };
+      })
+    );
 
     res.json(contents);
   } catch (error) {
