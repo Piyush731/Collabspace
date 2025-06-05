@@ -653,10 +653,14 @@ exports.addCollaborator = async (req, res) => {
     const usernames = giteaResponse.data.map(c => c.username);
     const users = await User.find({ username: { $in: usernames } });
     
-    const mappedCollaborators = collaborators.data.map(c => ({
-      user: users.find(u => u.username === c.username)?._id,
-      permission,
-    })).filter(c => c.user); 
+    const mappedCollaborators = giteaResponse.data.map((c) => {
+  const user = users.find((u) => u.username === c.username);
+  return {
+    user: user?._id,
+    permission: c.permission,
+  };
+}).filter(c => c.user);
+
     
     
     repo.collaborators = mappedCollaborators;
