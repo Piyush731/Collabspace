@@ -372,18 +372,19 @@ const handleFolderUpload = async (e) => {
 const handleFileUpload = async (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return; 
-    const readFileAsBase64 = (file) => {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target.result.split(',')[1]);
-        reader.onerror = (error) => reject(error);
-        reader.readAsDataURL(file);
-      });
-    };
+ const readFileAsText = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => resolve(e.target.result);
+    reader.onerror = (error) => reject(error);
+    reader.readAsText(file); // ✅ plain UTF-8
+  });
+};
+
 
     try {
       for (const file of files) {
-        const content = await readFileAsBase64(file);
+        const content = await readFileAsText(file);
          const fullPath = currentPath ? `${currentPath}/${file.name}` : file.name;
          await handleCreateFile({
           path: fullPath,
