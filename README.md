@@ -118,8 +118,8 @@ CollabSpace is a full-featured collaborative workspace platform built using the 
 
 
 # 🙋‍♂️ About the Developer
-- **Piyush Kashyap**  
-Final year B.Tech CSE student at Graphic Era Hill University
+- **Piyush Kashyap** <br>
+- Final year B.Tech CSE student at Graphic Era Hill University
 Email: piyushkashyap3247@gmail.com
 LinkedIn • GitHub
 
