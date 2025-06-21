@@ -78,7 +78,7 @@ CollabSpace is a full-featured collaborative workspace platform built using the 
 ### Setup Instructions
 
 # Clone the repo
-git clone https://github.com/piyushkashyap3247/collabspace.git
+git clone [https://github.com/piyushkashyap3247/collabspace.git](https://github.com/Piyush731/Collabspace.git)
 cd collabspace
 
 # Set up frontend
@@ -109,11 +109,12 @@ API_URL=http://localhost:5000/api   edit in config.js in frontend
 🗃️ Homepage
 .![homepage](https://github.com/user-attachments/assets/4b314318-f6bb-4661-91d6-6f97f6209054)
 
-💬 Real-time Chat
-Chat interface scoped to collaborators of each repository.
+💬 Real-time Chat in Repository
+![Repoview](https://github.com/user-attachments/assets/d9da0b87-a80c-420d-a5ff-ee5b53fa8142)
 
-🧩 JIRA Integration
-Bug tracking and sprint planning connected directly to your repo workspace.
+🧩 Task Management
+![taskmanagement](https://github.com/user-attachments/assets/afc93145-5a94-4b7e-9413-0ee195ccff1f)
+
 
 # 🙋‍♂️ About the Developer
 Piyush Kashyap
