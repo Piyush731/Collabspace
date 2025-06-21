@@ -78,31 +78,31 @@ CollabSpace is a full-featured collaborative workspace platform built using the 
 ### Setup Instructions
 
 # Clone the repo
-git clone [https://github.com/piyushkashyap3247/collabspace.git](https://github.com/Piyush731/Collabspace.git)
-cd collabspace
+-git clone [https://github.com/piyushkashyap3247/collabspace.git](https://github.com/Piyush731/Collabspace.git)
+-cd collabspace
 
 # Set up frontend
-npm install
-npm start
+-npm install
+-npm start
 
 # Set up backend
-cd ../backend
-npm install
-npm start
-Environment Variables
-Create a .env file in backend directories. Sample keys:
+-cd ../backend
+-npm install
+-npm start
+-Environment Variables
+-Create a .env file in backend directories. Sample keys:
 
 
 # Sample .env Backend
-PORT=5000
-MONGO_URI=your_mongo_connection_string
-JWT_SECRET=your_jwt_secret
-GITEA_API_URL=http://localhost:3000/api/v1
-GITEA_ADMIN_TOKEN=your_gitea_token
-JIRA_API_KEY=your_jira_api_key
+-PORT=5000
+-MONGO_URI=your_mongo_connection_string
+-JWT_SECRET=your_jwt_secret
+-GITEA_API_URL=http://localhost:3000/api/v1
+-GITEA_ADMIN_TOKEN=your_gitea_token
+-JIRA_API_KEY=your_jira_api_key
 
 
-API_URL=http://localhost:5000/api   edit in config.js in frontend
+-API_URL=http://localhost:5000/api   edit in config.js in frontend
 
 # 📸 Screenshots
 
@@ -117,7 +117,7 @@ API_URL=http://localhost:5000/api   edit in config.js in frontend
 
 
 # 🙋‍♂️ About the Developer
-Piyush Kashyap
+- **Piyush Kashyap**  
 Final year B.Tech CSE student at Graphic Era Hill University
 Email: piyushkashyap3247@gmail.com
 LinkedIn • GitHub
