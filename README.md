@@ -172,8 +172,8 @@ File editor is basic — does not support syntax highlighting yet.
 
 # 📞 Contact
 For any issues or questions, feel free to connect:
-
-Email: piyushkashyap3247@gmail.com
+- Email: piyushkashyap3247@gmail.com
+- 🔗 [LinkedIn](https://www.linkedin.com/in/piyush-kashyap731/)
 
 LinkedIn: linkedin.com/in/piyush-kashyap731
 
