@@ -153,28 +153,25 @@ This project is open-source and available under the MIT License.
 Contributions are welcome!
 If you'd like to fix a bug, suggest a feature, or improve the documentation:
 
-Fork this repository
+- Fork this repository
 
-Create a new branch: git checkout -b feature-name
+- Create a new branch: git checkout -b feature-name
 
-Commit your changes: git commit -m 'Add some feature'
+- Commit your changes: git commit -m 'Add some feature'
 
-Push to your branch: git push origin feature-name
+- Push to your branch: git push origin feature-name
 
-Submit a pull request
+- Submit a pull request
 
 # 🛠️ Known Issues
-In Repository View page, Repository permissions are laoding in delayed manner after refresh.
+- In Repository View page, Repository permissions are laoding in delayed manner after refresh.
 
-Limited JIRA role mapping to file level.
+- Limited JIRA role mapping to file level.
 
-File editor is basic — does not support syntax highlighting yet.
+- File editor is basic — does not support syntax highlighting yet.
 
 # 📞 Contact
 For any issues or questions, feel free to connect:
 - Email: piyushkashyap3247@gmail.com
 - 🔗 [LinkedIn](https://www.linkedin.com/in/piyush-kashyap731/)
-
-LinkedIn: linkedin.com/in/piyush-kashyap731
-
-GitHub: github.com/piyushkashyap3247
+- 🔗 [Github](https://github.com/Piyush731/)
