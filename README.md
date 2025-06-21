@@ -92,8 +92,8 @@ npm start
 Environment Variables
 Create a .env file in backend directories. Sample keys:
 
-Sample .env
-# Backend
+
+# Sample .env Backend
 PORT=5000
 MONGO_URI=your_mongo_connection_string
 JWT_SECRET=your_jwt_secret
@@ -101,14 +101,13 @@ GITEA_API_URL=http://localhost:3000/api/v1
 GITEA_ADMIN_TOKEN=your_gitea_token
 JIRA_API_KEY=your_jira_api_key
 
-# Frontend
-API_URL=http://localhost:5000/api   edit in config.js in src
 
+API_URL=http://localhost:5000/api   edit in config.js in frontend
 
-📸 Screenshots
+# 📸 Screenshots
 
-🗃️ Repository Viewer
-A GitHub-style file structure UI with branch selector and file actions.
+🗃️ Homepage
+.![homepage](https://github.com/user-attachments/assets/4b314318-f6bb-4661-91d6-6f97f6209054)
 
 💬 Real-time Chat
 Chat interface scoped to collaborators of each repository.
@@ -116,17 +115,17 @@ Chat interface scoped to collaborators of each repository.
 🧩 JIRA Integration
 Bug tracking and sprint planning connected directly to your repo workspace.
 
-🙋‍♂️ About the Developer
+# 🙋‍♂️ About the Developer
 Piyush Kashyap
 Final year B.Tech CSE student at Graphic Era Hill University
 Email: piyushkashyap3247@gmail.com
 LinkedIn • GitHub
 
-📃 License
+# 📃 License
 This project is open-source and available under the MIT License.
 
 
-🧭 System Architecture Overview
+# 🧭 System Architecture Overview
 
           ┌────────────┐       REST        ┌────────────┐
           │  Frontend  │ ────────────────► │  Backend   │
@@ -148,7 +147,7 @@ This project is open-source and available under the MIT License.
                                            └────────────┘
 
 
-🧑‍💻 Contributing
+# 🧑‍💻 Contributing
 Contributions are welcome!
 If you'd like to fix a bug, suggest a feature, or improve the documentation:
 
@@ -162,14 +161,14 @@ Push to your branch: git push origin feature-name
 
 Submit a pull request
 
-🛠️ Known Issues
+# 🛠️ Known Issues
 In Repository View page, Repository permissions are laoding in delayed manner after refresh.
 
 Limited JIRA role mapping to file level.
 
 File editor is basic — does not support syntax highlighting yet.
 
-📞 Contact
+# 📞 Contact
 For any issues or questions, feel free to connect:
 
 Email: piyushkashyap3247@gmail.com
