@@ -95,15 +95,14 @@ CollabSpace is a full-featured collaborative workspace platform built using the 
 
 
 # Sample .env Backend
-- PORT=5000
-- MONGO_URI=your_mongo_connection_string
-- JWT_SECRET=your_jwt_secret
-- GITEA_API_URL=http://localhost:3000/api/v1
-- GITEA_ADMIN_TOKEN=your_gitea_token
-- JIRA_API_KEY=your_jira_api_key
-
-
-- API_URL=http://localhost:5000/api   edit in config.js in frontend
+PORT=5000<br>
+MONGO_URI=your_mongo_connection_string<br>
+JWT_SECRET=your_jwt_secret<br>
+GITEA_API_URL=http://localhost:3000/api/v1<br>
+GITEA_ADMIN_TOKEN=your_gitea_token<br>
+JIRA_API_KEY=your_jira_api_key<br>
+<br>
+API_URL=http://localhost:5000/api   edit in config.js in frontend <br>
 
 # 📸 Screenshots
 
@@ -119,9 +118,9 @@ CollabSpace is a full-featured collaborative workspace platform built using the 
 
 # 🙋‍♂️ About the Developer
 - **Piyush Kashyap** <br>
-- Final year B.Tech CSE student at Graphic Era Hill University
-Email: piyushkashyap3247@gmail.com
-LinkedIn • GitHub
+Final year B.Tech CSE student at Graphic Era Hill University<br>
+Email: piyushkashyap3247@gmail.com<br>
+🔗 [LinkedIn](https://www.linkedin.com/in/piyush-kashyap731/), 🔗[ GitHub](https://github.com/Piyush731/) <br>
 
 # 📃 License
 This project is open-source and available under the MIT License.
